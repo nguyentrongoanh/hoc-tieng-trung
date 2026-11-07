@@ -255,6 +255,8 @@
 
   function speak(text) {
     if (!synth || !text) return;
+    // Re-pick voice on-demand nếu chưa có (một số browser load voices chậm)
+    if (!zhVoice) pickZhVoice();
     try {
       synth.cancel();
       const u = new SpeechSynthesisUtterance(text);
@@ -262,10 +264,17 @@
       u.rate = 0.85;
       u.pitch = 1;
       if (zhVoice) u.voice = zhVoice;
+      u.onerror = (e) => console.warn("TTS error:", e.error || e);
       synth.speak(u);
     } catch (e) {
       console.warn("TTS failed:", e);
     }
+  }
+
+  // Thử pick voice lại sau 500ms + 1500ms vì một số browser (Chrome) load chậm
+  if (synth) {
+    setTimeout(pickZhVoice, 500);
+    setTimeout(pickZhVoice, 1500);
   }
 
   if (synth) {
@@ -484,7 +493,11 @@
       easeAfter: next.ease,
     });
     saveState();
-    advance(rating);
+    // Unflip card TRƯỚC khi đổi content để tránh user thấy đáp án thẻ kế flash trên back-face.
+    // Lúc card quay nửa vòng (~350ms), cả 2 mặt vuông góc với screen → invisible.
+    card.classList.remove("flipped");
+    setSRSButtonsEnabled(false);
+    setTimeout(() => advance(rating), 350);
   }
 
   function advance(lastRating) {
@@ -514,7 +527,13 @@
     if (cards.length === 0) return;
     state.index = (state.index + delta + cards.length) % cards.length;
     saveState();
-    render();
+    if (card.classList.contains("flipped")) {
+      card.classList.remove("flipped");
+      setSRSButtonsEnabled(false);
+      setTimeout(render, 350);
+    } else {
+      render();
+    }
   }
 
   function shuffle() {
