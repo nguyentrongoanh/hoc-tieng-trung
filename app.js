@@ -278,6 +278,20 @@
   }
 
   // ---------- Bộ thủ ----------
+  // Dịch tên kết cấu chữ (struct) sang tiếng Việt
+  const STRUCT_VI = {
+    "左右结构": "Trái - phải",
+    "上下结构": "Trên - dưới",
+    "左中右结构": "Trái - giữa - phải",
+    "上中下结构": "Trên - giữa - dưới",
+    "独体结构": "Độc thể (một khối)",
+    "半包围结构": "Bán bao vây",
+    "全包围结构": "Toàn bao vây",
+    "嵌套结构": "Lồng nhau",
+    "品字结构": 'Kiểu chữ "品" (3 khối)',
+    "田字结构": 'Kiểu chữ "田" (4 khối)',
+  };
+
   function renderRadicals(hanzi) {
     radicalsList.innerHTML = "";
     const chars = Array.from(hanzi || "").filter((c) => /[一-鿿]/.test(c));
@@ -285,15 +299,16 @@
       radicalsList.innerHTML = '<p class="muted">Không có chữ Hán để phân tích.</p>';
       return;
     }
-    let radString = "";
+
+    // cnchar.radical trả về MẢNG objects: [{ radical, radicalCount, struct }]
+    let radInfos = [];
     try {
       if (window.cnchar && typeof window.cnchar.radical === "function") {
-        radString = window.cnchar.radical(chars.join(""));
+        const result = window.cnchar.radical(chars.join(""));
+        radInfos = Array.isArray(result) ? result : [];
       }
-    } catch (e) {
-      /* ignore */
-    }
-    const rads = Array.from(radString || "");
+    } catch (e) { /* ignore */ }
+
     const strokes = chars.map((c) => {
       try {
         if (window.cnchar && typeof window.cnchar.stroke === "function") {
@@ -305,7 +320,10 @@
 
     const frag = document.createDocumentFragment();
     chars.forEach((char, i) => {
-      const rad = rads[i] || "?";
+      const rInfo = radInfos[i] || {};
+      const rad = rInfo.radical || "?";
+      const residual = rInfo.radicalCount;    // nét ngoài bộ thủ
+      const struct = rInfo.struct;
       const info = (typeof RADICALS !== "undefined" && RADICALS[rad]) || null;
       const row = document.createElement("div");
       row.className = "rad-row";
@@ -318,9 +336,13 @@
             ${info
               ? `<span class="rad-name">Bộ <strong>${escapeHtml(info.viName)}</strong></span>
                  <span class="rad-mean">— ${escapeHtml(info.viMeaning)}</span>`
-              : `<span class="muted">(chưa có dữ liệu Việt cho bộ thủ này)</span>`}
+              : `<span class="muted">(chưa có dữ liệu Việt cho bộ thủ "${escapeHtml(rad)}")</span>`}
           </div>
-          ${strokes[i] != null ? `<div class="rad-stroke muted">${strokes[i]} nét</div>` : ""}
+          <div class="rad-sub muted">
+            ${strokes[i] != null ? `<span>Tổng ${strokes[i]} nét</span>` : ""}
+            ${residual != null ? `<span>· ngoài bộ thủ: ${residual} nét</span>` : ""}
+            ${struct ? `<span>· kết cấu: <strong>${escapeHtml(STRUCT_VI[struct] || struct)}</strong></span>` : ""}
+          </div>
         </div>`;
       row.querySelector(".rad-speak").addEventListener("click", (e) => {
         e.stopPropagation();

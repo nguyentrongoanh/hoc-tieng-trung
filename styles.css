@@ -343,6 +343,14 @@ body {
 .rad-name { color: var(--text); }
 .rad-mean { color: var(--muted); }
 .rad-stroke { font-size: 12px; margin-top: 4px; }
+.rad-sub {
+  font-size: 12px;
+  margin-top: 4px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.rad-sub strong { color: #93c5fd; font-weight: 600; }
 
 /* Heatmap */
 .heatmap-box {

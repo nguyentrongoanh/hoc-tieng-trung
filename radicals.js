@@ -179,6 +179,7 @@ const RADICALS = {
   "衣": { viName: "Y", viMeaning: "áo" },
   "衤": { viName: "Y", viMeaning: "áo (biến thể bên trái)" },
   "襾": { viName: "Á", viMeaning: "che đậy" },
+  "覀": { viName: "Á", viMeaning: "che đậy (biến thể bên trên)" },
 
   // 7-nét
   "見": { viName: "Kiến", viMeaning: "nhìn thấy" },
@@ -221,6 +222,7 @@ const RADICALS = {
   "隹": { viName: "Chuy", viMeaning: "chim đuôi ngắn" },
   "雨": { viName: "Vũ", viMeaning: "mưa" },
   "青": { viName: "Thanh", viMeaning: "xanh, trong" },
+  "靑": { viName: "Thanh", viMeaning: "xanh, trong (biến thể truyền thống)" },
   "非": { viName: "Phi", viMeaning: "không, trái" },
 
   // 9-nét
