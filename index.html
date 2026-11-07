@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Flashcard Tiếng Trung</title>
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <h1>学中文 · Flashcard Tiếng Trung</h1>
+    <div class="deck-picker">
+      <label for="deckSelect">Bộ thẻ:</label>
+      <select id="deckSelect"></select>
+      <div class="mode-toggle" role="tablist" aria-label="Chế độ">
+        <button id="modeStudyBtn" class="mode-btn active">📚 Học (due)</button>
+        <button id="modeBrowseBtn" class="mode-btn">👀 Lướt</button>
+      </div>
+      <button id="shuffleBtn" title="Trộn thẻ (chế độ Lướt)">🔀 Trộn</button>
+      <button id="resetBtn" title="Đặt lại SRS + tiến độ bộ hiện tại">↺ Reset</button>
+      <button id="deleteDeckBtn" title="Xóa bộ hiện tại">🗑 Xóa</button>
+    </div>
+  </header>
+
+  <!-- 📊 Stats -->
+  <section class="stats-grid">
+    <div class="stat-cell due"><div class="n" id="statDue">0</div><div class="l">Đến hạn ôn</div></div>
+    <div class="stat-cell new"><div class="n" id="statNew">0</div><div class="l">Thẻ mới</div></div>
+    <div class="stat-cell learning"><div class="n" id="statLearning">0</div><div class="l">Đang học</div></div>
+    <div class="stat-cell mature"><div class="n" id="statMature">0</div><div class="l">Thành thạo</div></div>
+    <div class="stat-cell today"><div class="n" id="statToday">0</div><div class="l">Ôn hôm nay</div></div>
+    <div class="stat-cell retention"><div class="n" id="statRetention">—</div><div class="l">Retention 14d</div></div>
+  </section>
+
+  <main class="card-area">
+    <button class="nav-btn" id="prevBtn" aria-label="Thẻ trước">‹</button>
+
+    <div class="card" id="card">
+      <div class="card-inner" id="cardInner">
+        <div class="card-face card-front">
+          <div class="card-tag" id="cardTagFront">—</div>
+          <div class="hanzi" id="hanzi">汉</div>
+          <div class="hint">Nhấn thẻ (hoặc Space) để lật</div>
+        </div>
+        <div class="card-face card-back">
+          <div class="card-tag" id="cardTagBack">—</div>
+          <div class="pinyin" id="pinyin">hàn</div>
+          <div class="meaning" id="meaning">chữ Hán</div>
+          <div class="example" id="example"></div>
+        </div>
+      </div>
+    </div>
+
+    <button class="nav-btn" id="nextBtn" aria-label="Thẻ kế">›</button>
+  </main>
+
+  <!-- 🎯 SRS rating buttons -->
+  <section class="srs-actions" id="srsActions">
+    <button class="rate" data-rating="1">
+      <span class="label">Again</span><span class="iv" id="ivAgain">—</span><span class="kbd">1</span>
+    </button>
+    <button class="rate hard" data-rating="2">
+      <span class="label">Hard</span><span class="iv" id="ivHard">—</span><span class="kbd">2</span>
+    </button>
+    <button class="rate good" data-rating="3">
+      <span class="label">Good</span><span class="iv" id="ivGood">—</span><span class="kbd">3</span>
+    </button>
+    <button class="rate easy" data-rating="4">
+      <span class="label">Easy</span><span class="iv" id="ivEasy">—</span><span class="kbd">4</span>
+    </button>
+  </section>
+  <div class="srs-hint muted" id="srsHint">Lật thẻ để hiện các nút đánh giá.</div>
+
+  <!-- 🔥 Heatmap -->
+  <section class="heatmap-box">
+    <div class="heatmap-header">
+      <strong>🔥 Hoạt động 90 ngày qua</strong>
+      <span class="muted" id="heatmapTotal"></span>
+    </div>
+    <div class="heatmap" id="heatmap"></div>
+    <div class="heatmap-legend muted">
+      ít
+      <span class="hc hc-0"></span>
+      <span class="hc hc-1"></span>
+      <span class="hc hc-2"></span>
+      <span class="hc hc-3"></span>
+      <span class="hc hc-4"></span>
+      nhiều
+    </div>
+  </section>
+
+  <section class="hotkeys muted">
+    <strong>Phím tắt:</strong>
+    <kbd>Space</kbd> lật ·
+    <kbd>1-4</kbd> Again/Hard/Good/Easy ·
+    <kbd>←</kbd>/<kbd>→</kbd> thẻ trước/sau (Lướt) ·
+    <kbd>S</kbd> trộn
+  </section>
+
+  <!-- 📥 Import -->
+  <section class="import-box">
+    <h3>📥 Import từ PDF / Ảnh / Slide (.pptx)</h3>
+    <p class="muted">Mỗi trang PDF / slide PPTX trở thành một "Buổi". Pinyin tự sinh; nghĩa tiếng Việt bạn điền ở bảng sửa bên dưới.</p>
+    <div class="import-controls">
+      <input type="file" id="importFile" accept=".pdf,.pptx,image/*" />
+      <span id="importStatus" class="muted"></span>
+    </div>
+    <div id="importPreview"></div>
+  </section>
+
+  <!-- ➕ Thêm thẻ thủ công -->
+  <section class="add-card">
+    <h3>➕ Thêm thẻ thủ công (vào bộ "Của tôi")</h3>
+    <form id="addForm">
+      <input type="text" id="newHanzi" placeholder="汉字 (Chữ Hán)" required />
+      <input type="text" id="newPinyin" placeholder="pīnyīn" required />
+      <input type="text" id="newMeaning" placeholder="Nghĩa tiếng Việt" required />
+      <input type="text" id="newExample" placeholder="Ví dụ (tuỳ chọn)" />
+      <button type="submit">Thêm thẻ</button>
+    </form>
+  </section>
+
+  <!-- ✏️ Sửa thẻ -->
+  <section class="edit-deck">
+    <h3>✏️ Sửa thẻ của bộ hiện tại <small class="muted">(chỉ các bộ bạn tạo/import)</small></h3>
+    <div id="editList"></div>
+  </section>
+
+  <footer>
+    <small>Dữ liệu SRS, tiến độ, thẻ và lịch sử ôn tập lưu trong trình duyệt (localStorage).</small>
+  </footer>
+</div>
+
+<!-- Libs -->
+<script type="module">
+  import * as pdfjsLib from "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.0.379/build/pdf.min.mjs";
+  pdfjsLib.GlobalWorkerOptions.workerSrc =
+    "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.0.379/build/pdf.worker.min.mjs";
+  window.pdfjsLib = pdfjsLib;
+  window.dispatchEvent(new Event("pdfjs-ready"));
+</script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.0.4/dist/tesseract.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pinyin-pro@3.19.6/dist/index.js"></script>
+
+<script src="srs.js"></script>
+<script src="decks.js"></script>
+<script src="app.js"></script>
+<script src="import.js"></script>
+</body>
+</html>
