@@ -72,6 +72,15 @@
   </section>
   <div class="srs-hint muted" id="srsHint">Lật thẻ để hiện các nút đánh giá.</div>
 
+  <!-- 📖 Bộ thủ -->
+  <section class="radicals-box" id="radicalsBox">
+    <div class="radicals-header">
+      <strong>📖 Bộ thủ & giải nghĩa</strong>
+      <span class="muted" id="radicalsHint">Phân tích thẻ hiện tại</span>
+    </div>
+    <div id="radicalsList"></div>
+  </section>
+
   <!-- 🔥 Heatmap -->
   <section class="heatmap-box">
     <div class="heatmap-header">
@@ -143,7 +152,10 @@
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.0.4/dist/tesseract.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/pinyin-pro@3.19.6/dist/index.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/cnchar@3.2.6/cnchar.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/cnchar-radical@3.2.6/cnchar.radical.min.js"></script>
 
+<script src="radicals.js"></script>
 <script src="srs.js"></script>
 <script src="decks.js"></script>
 <script src="app.js"></script>

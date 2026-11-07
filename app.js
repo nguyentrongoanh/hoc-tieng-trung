@@ -46,6 +46,7 @@
   const editList = $("editList");
   const heatmapEl = $("heatmap");
   const heatmapTotal = $("heatmapTotal");
+  const radicalsList = $("radicalsList");
 
   // ---------- Storage ----------
   function loadState() {
@@ -199,6 +200,56 @@
     cardTagFront.className = "card-tag tag-" + status;
     cardTagBack.className = "card-tag tag-" + status;
     card.classList.remove("flipped");
+    renderRadicals(c.hanzi);
+  }
+
+  // ---------- Bộ thủ ----------
+  function renderRadicals(hanzi) {
+    radicalsList.innerHTML = "";
+    const chars = Array.from(hanzi || "").filter((c) => /[一-鿿]/.test(c));
+    if (chars.length === 0) {
+      radicalsList.innerHTML = '<p class="muted">Không có chữ Hán để phân tích.</p>';
+      return;
+    }
+    let radString = "";
+    try {
+      if (window.cnchar && typeof window.cnchar.radical === "function") {
+        radString = window.cnchar.radical(chars.join(""));
+      }
+    } catch (e) {
+      /* ignore */
+    }
+    const rads = Array.from(radString || "");
+    const strokes = (() => {
+      try {
+        if (window.cnchar && typeof window.cnchar.stroke === "function") {
+          return chars.map((c) => window.cnchar.stroke(c));
+        }
+      } catch (e) {}
+      return chars.map(() => null);
+    })();
+
+    const frag = document.createDocumentFragment();
+    chars.forEach((char, i) => {
+      const rad = rads[i] || "?";
+      const info = (typeof RADICALS !== "undefined" && RADICALS[rad]) || null;
+      const row = document.createElement("div");
+      row.className = "rad-row";
+      row.innerHTML = `
+        <div class="rad-big">${escapeHtml(char)}</div>
+        <div class="rad-detail">
+          <div class="rad-top">
+            <span class="rad-glyph" title="Bộ thủ">${escapeHtml(rad)}</span>
+            ${info
+              ? `<span class="rad-name">Bộ <strong>${escapeHtml(info.viName)}</strong></span>
+                 <span class="rad-mean">— ${escapeHtml(info.viMeaning)}</span>`
+              : `<span class="muted">(chưa có dữ liệu Việt cho bộ thủ này)</span>`}
+          </div>
+          ${strokes[i] != null ? `<div class="rad-stroke muted">${strokes[i]} nét</div>` : ""}
+        </div>`;
+      frag.appendChild(row);
+    });
+    radicalsList.appendChild(frag);
   }
 
   function tagLabel(status) {
