@@ -20,6 +20,13 @@
       <button id="shuffleBtn" title="Trộn thẻ (chế độ Lướt)">🔀 Trộn</button>
       <button id="resetBtn" title="Đặt lại SRS + tiến độ bộ hiện tại">↺ Reset</button>
       <button id="deleteDeckBtn" title="Xóa bộ hiện tại">🗑 Xóa</button>
+      <label class="autoplay-toggle" title="Tự động phát âm khi hiện thẻ">
+        <input type="checkbox" id="autoplayCheck" />
+        <span>🔊 Tự phát âm</span>
+      </label>
+      <button id="backupBtn" title="Tải backup toàn bộ dữ liệu ra file JSON">⬇ Backup</button>
+      <button id="restoreBtn" title="Khôi phục từ file backup">⬆ Restore</button>
+      <input type="file" id="restoreFile" accept="application/json" style="display:none" />
     </div>
   </header>
 
@@ -40,11 +47,13 @@
       <div class="card-inner" id="cardInner">
         <div class="card-face card-front">
           <div class="card-tag" id="cardTagFront">—</div>
+          <button class="speak-btn" id="speakFront" title="Phát âm (P)" aria-label="Phát âm">🔊</button>
           <div class="hanzi" id="hanzi">汉</div>
-          <div class="hint">Nhấn thẻ (hoặc Space) để lật</div>
+          <div class="hint">Nhấn thẻ (hoặc Space) để lật · <kbd>P</kbd> phát âm</div>
         </div>
         <div class="card-face card-back">
           <div class="card-tag" id="cardTagBack">—</div>
+          <button class="speak-btn" id="speakBack" title="Phát âm (P)" aria-label="Phát âm">🔊</button>
           <div class="pinyin" id="pinyin">hàn</div>
           <div class="meaning" id="meaning">chữ Hán</div>
           <div class="example" id="example"></div>
@@ -102,10 +111,12 @@
   <section class="hotkeys muted">
     <strong>Phím tắt:</strong>
     <kbd>Space</kbd> lật ·
+    <kbd>P</kbd> phát âm ·
     <kbd>1-4</kbd> Again/Hard/Good/Easy ·
     <kbd>←</kbd>/<kbd>→</kbd> thẻ trước/sau (Lướt) ·
     <kbd>S</kbd> trộn
   </section>
+  <section class="voice-info muted" id="voiceInfo"></section>
 
   <!-- 📥 Import -->
   <section class="import-box">

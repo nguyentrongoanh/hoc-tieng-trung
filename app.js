@@ -10,6 +10,7 @@
   if (!state.reviewLog) state.reviewLog = [];    // [{t, deckId, cardKey, rating, intervalAfter}]
   if (!state.progress) state.progress = {};      // { deckId: { order } } — dùng cho browse shuffle
   if (!state.mode) state.mode = "study";         // "study" | "browse"
+  if (typeof state.autoplay !== "boolean") state.autoplay = false;
   if (typeof state.index !== "number") state.index = 0;
 
   const allDeckIds = () => [
@@ -47,6 +48,13 @@
   const heatmapEl = $("heatmap");
   const heatmapTotal = $("heatmapTotal");
   const radicalsList = $("radicalsList");
+  const speakFrontBtn = $("speakFront");
+  const speakBackBtn = $("speakBack");
+  const autoplayCheck = $("autoplayCheck");
+  const voiceInfo = $("voiceInfo");
+  const backupBtn = $("backupBtn");
+  const restoreBtn = $("restoreBtn");
+  const restoreFile = $("restoreFile");
 
   // ---------- Storage ----------
   function loadState() {
@@ -201,6 +209,72 @@
     cardTagBack.className = "card-tag tag-" + status;
     card.classList.remove("flipped");
     renderRadicals(c.hanzi);
+    if (state.autoplay && c.hanzi && /[一-鿿]/.test(c.hanzi)) {
+      // chút trễ để queue chạy sau khi card show
+      setTimeout(() => speak(c.hanzi), 250);
+    }
+  }
+
+  // ---------- Audio (TTS tiếng Trung) ----------
+  let zhVoice = null;
+  const synth = typeof window.speechSynthesis !== "undefined" ? window.speechSynthesis : null;
+
+  function pickZhVoice() {
+    if (!synth) return;
+    const voices = synth.getVoices() || [];
+    const zh = voices.filter((v) => {
+      const lang = (v.lang || "").toLowerCase().replace("_", "-");
+      return lang.startsWith("zh-cn") || lang === "zh" || lang.startsWith("cmn");
+    });
+    // Ưu tiên giọng chất lượng cao thường gặp trên macOS/Win/Chrome
+    const preferred = [
+      /tingting/i, /meijia/i, /sinji/i,                         // macOS
+      /xiaoxiao/i, /yaoyao/i, /kangkang/i, /huihui/i,           // Microsoft
+      /google.*中国|google.*mandarin|google\s*普通话|google\s*zh/i, // Chrome Google
+    ];
+    for (const re of preferred) {
+      const v = zh.find((x) => re.test(x.name));
+      if (v) { zhVoice = v; break; }
+    }
+    if (!zhVoice && zh.length) zhVoice = zh[0];
+    updateVoiceInfo();
+  }
+
+  function updateVoiceInfo() {
+    if (!voiceInfo) return;
+    if (!synth) {
+      voiceInfo.textContent = "⚠️ Trình duyệt không hỗ trợ phát âm (Web Speech API).";
+      return;
+    }
+    if (!zhVoice) {
+      voiceInfo.innerHTML = '⚠️ Chưa tìm thấy giọng tiếng Trung trên máy. Cài thêm giọng trong cài đặt hệ thống (Mac: Settings → Spoken Content; Windows: Settings → Time & Language → Speech).';
+      return;
+    }
+    voiceInfo.textContent = `🎙 Giọng: ${zhVoice.name} (${zhVoice.lang})`;
+  }
+
+  function speak(text) {
+    if (!synth || !text) return;
+    try {
+      synth.cancel();
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = "zh-CN";
+      u.rate = 0.85;
+      u.pitch = 1;
+      if (zhVoice) u.voice = zhVoice;
+      synth.speak(u);
+    } catch (e) {
+      console.warn("TTS failed:", e);
+    }
+  }
+
+  if (synth) {
+    pickZhVoice();
+    if (typeof synth.onvoiceschanged !== "undefined") {
+      synth.addEventListener("voiceschanged", pickZhVoice);
+    }
+  } else {
+    updateVoiceInfo();
   }
 
   // ---------- Bộ thủ ----------
@@ -220,14 +294,14 @@
       /* ignore */
     }
     const rads = Array.from(radString || "");
-    const strokes = (() => {
+    const strokes = chars.map((c) => {
       try {
         if (window.cnchar && typeof window.cnchar.stroke === "function") {
-          return chars.map((c) => window.cnchar.stroke(c));
+          return window.cnchar.stroke(c);
         }
       } catch (e) {}
-      return chars.map(() => null);
-    })();
+      return null;
+    });
 
     const frag = document.createDocumentFragment();
     chars.forEach((char, i) => {
@@ -239,6 +313,7 @@
         <div class="rad-big">${escapeHtml(char)}</div>
         <div class="rad-detail">
           <div class="rad-top">
+            <button class="rad-speak" data-char="${escapeHtml(char)}" title="Nghe cách đọc">🔊</button>
             <span class="rad-glyph" title="Bộ thủ">${escapeHtml(rad)}</span>
             ${info
               ? `<span class="rad-name">Bộ <strong>${escapeHtml(info.viName)}</strong></span>
@@ -247,6 +322,10 @@
           </div>
           ${strokes[i] != null ? `<div class="rad-stroke muted">${strokes[i]} nét</div>` : ""}
         </div>`;
+      row.querySelector(".rad-speak").addEventListener("click", (e) => {
+        e.stopPropagation();
+        speak(char);
+      });
       frag.appendChild(row);
     });
     radicalsList.appendChild(frag);
@@ -383,18 +462,23 @@
       easeAfter: next.ease,
     });
     saveState();
-    advance();
+    advance(rating);
   }
 
-  function advance() {
+  function advance(lastRating) {
     if (state.mode === "study") {
-      // bỏ item đã rate khỏi queue, chuyển sang tiếp theo
-      queue.splice(queueIndex, 1);
+      const item = queue[queueIndex];
+      // Nếu Again (1): đẩy thẻ về cuối queue để ôn lại ngay trong session
+      // Nếu Hard/Good/Easy: bỏ khỏi queue (đã schedule future)
+      if (lastRating === 1 && item) {
+        queue.splice(queueIndex, 1);
+        queue.push(item);
+      } else {
+        queue.splice(queueIndex, 1);
+      }
       if (queueIndex >= queue.length) queueIndex = 0;
-      // nếu queue rỗng, build lại (có thể có thẻ due mới sau 10 phút của Again)
       if (queue.length === 0) rebuildQueue();
     } else {
-      // browse: chuyển kế tiếp
       const cards = getDeckCards(state.deckId);
       state.index = (state.index + 1) % cards.length;
     }
@@ -484,6 +568,66 @@
   resetBtn.addEventListener("click", resetDeck);
   deleteDeckBtn.addEventListener("click", deleteCurrentDeck);
 
+  // Speaker
+  const speakCurrent = () => {
+    const cur = getCurrentCard();
+    if (cur && cur.card && cur.card.hanzi) speak(cur.card.hanzi);
+  };
+  speakFrontBtn.addEventListener("click", (e) => { e.stopPropagation(); speakCurrent(); });
+  speakBackBtn.addEventListener("click", (e) => { e.stopPropagation(); speakCurrent(); });
+
+  // Autoplay
+  autoplayCheck.checked = state.autoplay;
+  autoplayCheck.addEventListener("change", () => {
+    state.autoplay = autoplayCheck.checked;
+    saveState();
+  });
+
+  // Backup / Restore
+  backupBtn.addEventListener("click", () => {
+    const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    const ts = new Date().toISOString().slice(0, 10);
+    a.href = url;
+    a.download = `flashcard-zh-backup-${ts}.json`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  });
+  restoreBtn.addEventListener("click", () => restoreFile.click());
+  restoreFile.addEventListener("change", async (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    if (!confirm(`Khôi phục từ "${file.name}"? Dữ liệu hiện tại sẽ bị thay thế.`)) {
+      restoreFile.value = "";
+      return;
+    }
+    try {
+      const text = await file.text();
+      const data = JSON.parse(text);
+      if (!data || typeof data !== "object") throw new Error("Không phải JSON hợp lệ.");
+      state = data;
+      // chuẩn hoá các trường còn thiếu
+      if (!state.customCards) state.customCards = [];
+      if (!state.importedDecks) state.importedDecks = {};
+      if (!state.srs) state.srs = {};
+      if (!state.reviewLog) state.reviewLog = [];
+      if (!state.progress) state.progress = {};
+      if (!state.mode) state.mode = "study";
+      if (typeof state.autoplay !== "boolean") state.autoplay = false;
+      if (!allDeckIds().includes(state.deckId)) state.deckId = Object.keys(DECKS)[0];
+      saveState();
+      populateDeckSelect();
+      autoplayCheck.checked = state.autoplay;
+      rebuildQueue();
+      render();
+      alert("Đã khôi phục dữ liệu.");
+    } catch (err) {
+      alert("Lỗi khi khôi phục: " + err.message);
+    }
+    restoreFile.value = "";
+  });
+
   srsActions.querySelectorAll("button.rate").forEach((b) => {
     b.addEventListener("click", () => {
       if (b.disabled) return;
@@ -514,6 +658,10 @@
       case "s":
       case "S":
         shuffle();
+        break;
+      case "p":
+      case "P":
+        speakCurrent();
         break;
     }
   });
