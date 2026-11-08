@@ -782,10 +782,42 @@
   });
 
   // Test buttons (luôn có trong HTML, không inject)
-  testWebBtn.addEventListener("click", () => speakWeb("你好", (err) => {
-    if (err) alert("❌ Giọng máy không hoạt động: " + err.message + "\nThử bật '🌐 Google TTS' trong topbar.");
-  }));
-  testGoogleBtn.addEventListener("click", () => speakGoogle("你好"));
+  testWebBtn.addEventListener("click", () => {
+    let startedAt = null;
+    speakWeb("你好", (err) => {
+      if (err) {
+        alert(
+          "❌ Giọng máy KHÔNG hoạt động.\n" +
+          "Lý do: " + err.message + "\n\n" +
+          "→ Tick '🌐 Google TTS' trong topbar để dùng Google thay thế."
+        );
+      } else {
+        alert("✅ Giọng máy hoạt động (nếu không nghe tiếng → kiểm tra volume máy, hoặc bật '🌐 Google TTS' nếu vẫn silent).");
+      }
+    });
+  });
+
+  testGoogleBtn.addEventListener("click", () => {
+    if (!googleAudio) { alert("❌ Không có audio element"); return; }
+    let resolved = false;
+    googleAudio.onplaying = () => {
+      if (resolved) return;
+      resolved = true;
+      alert("✅ Google TTS hoạt động!\n→ Tick '🌐 Google TTS' trong topbar để app luôn dùng Google.");
+    };
+    googleAudio.onerror = () => {
+      if (resolved) return;
+      resolved = true;
+      alert("❌ Google TTS fail. Thử Youdao:\n" + googleAudio.error?.message);
+    };
+    speakGoogle("你好");
+    setTimeout(() => {
+      if (!resolved) {
+        resolved = true;
+        alert("⏱ Google TTS timeout 3s — có thể do CORS hoặc network. Thử lại hoặc check DevTools Network tab.");
+      }
+    }, 3000);
+  });
 
   // Backup / Restore
   backupBtn.addEventListener("click", () => {
