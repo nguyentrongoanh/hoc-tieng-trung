@@ -30,6 +30,10 @@
         <input type="checkbox" id="autoplayCheck" />
         <span>🔊 Tự phát âm</span>
       </label>
+      <label class="autoplay-toggle" title="Phát âm qua Google Translate TTS thay cho giọng máy (cần internet nhưng ổn định hơn)">
+        <input type="checkbox" id="useGoogleCheck" />
+        <span>🌐 Google TTS</span>
+      </label>
       <button id="backupBtn" title="Tải backup toàn bộ dữ liệu ra file JSON">⬇ Backup</button>
       <button id="restoreBtn" title="Khôi phục từ file backup">⬆ Restore</button>
       <input type="file" id="restoreFile" accept="application/json" style="display:none" />
@@ -122,7 +126,12 @@
     <kbd>←</kbd>/<kbd>→</kbd> thẻ trước/sau (Lướt) ·
     <kbd>S</kbd> trộn
   </section>
-  <section class="voice-info muted" id="voiceInfo"></section>
+  <section class="voice-info muted">
+    <span id="voiceInfo"></span>
+    <button type="button" class="voice-test-btn" id="testWebBtn">🔊 Test giọng máy</button>
+    <button type="button" class="voice-test-btn" id="testGoogleBtn">🌐 Test Google TTS</button>
+  </section>
+  <audio id="googleAudio" preload="none"></audio>
 
   <!-- 📥 Import -->
   <section class="import-box">

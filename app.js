@@ -11,6 +11,7 @@
   if (!state.progress) state.progress = {};      // { deckId: { order } } — dùng cho browse shuffle
   if (!state.mode) state.mode = "study";         // "study" | "browse"
   if (typeof state.autoplay !== "boolean") state.autoplay = false;
+  if (typeof state.useGoogleTts !== "boolean") state.useGoogleTts = false;
   if (typeof state.index !== "number") state.index = 0;
 
   const allDeckIds = () => [
@@ -56,6 +57,10 @@
   const backupBtn = $("backupBtn");
   const restoreBtn = $("restoreBtn");
   const restoreFile = $("restoreFile");
+  const useGoogleCheck = $("useGoogleCheck");
+  const testWebBtn = $("testWebBtn");
+  const testGoogleBtn = $("testGoogleBtn");
+  const googleAudio = $("googleAudio");
 
   // ---------- Storage ----------
   function loadState() {
@@ -255,22 +260,17 @@
   function updateVoiceInfo() {
     if (!voiceInfo) return;
     if (!synth) {
-      voiceInfo.textContent = "⚠️ Trình duyệt không hỗ trợ phát âm (Web Speech API).";
+      voiceInfo.innerHTML = "⚠️ Trình duyệt không hỗ trợ speechSynthesis — dùng Google TTS.";
       return;
     }
     const totalVoices = (synth.getVoices() || []).length;
-    const parts = [];
     if (zhVoice) {
-      parts.push(`🎙 Giọng: <strong>${zhVoice.name}</strong> (${zhVoice.lang})`);
+      voiceInfo.innerHTML = `🎙 Giọng máy: <strong>${zhVoice.name}</strong> (${zhVoice.lang})`;
     } else if (totalVoices === 0) {
-      parts.push("⏳ Đang chờ trình duyệt load danh sách giọng...");
+      voiceInfo.textContent = "⏳ Đang chờ trình duyệt load danh sách giọng...";
     } else {
-      parts.push(`⚠️ Không có giọng tiếng Trung trong ${totalVoices} giọng khả dụng.`);
+      voiceInfo.textContent = `⚠️ Không có giọng tiếng Trung trong ${totalVoices} giọng khả dụng.`;
     }
-    parts.push(`<button class="voice-test-btn" id="voiceTestBtn">🔊 Test + chẩn đoán</button>`);
-    voiceInfo.innerHTML = parts.join(" · ");
-    const btn = document.getElementById("voiceTestBtn");
-    if (btn) btn.addEventListener("click", diagnoseTTS);
   }
 
   // Chẩn đoán TTS: chạy test và hiện kết quả qua alert() để user thấy trực tiếp
@@ -327,23 +327,32 @@
   }
 
   function speak(text) {
-    if (!synth || !text) {
-      console.warn("[TTS] synth hoặc text không có");
+    if (!text) return;
+    if (state.useGoogleTts) {
+      speakGoogle(text);
       return;
     }
+    speakWeb(text, (err) => {
+      // Nếu speechSynthesis fail/silent → tự động fallback Google TTS
+      if (err) speakGoogle(text);
+    });
+  }
+
+  let chromeKeepAliveTimer = null;
+  function speakWeb(text, cb) {
+    if (!synth) { cb && cb(new Error("no speechSynthesis")); return; }
     if (!zhVoice) pickZhVoice();
     try {
       synth.cancel();
-      // Chrome bug: nếu đang paused thì resume
       if (synth.paused) synth.resume();
       const u = new SpeechSynthesisUtterance(text);
       u.lang = "zh-CN";
       u.rate = 0.85;
       u.pitch = 1;
       if (zhVoice) u.voice = zhVoice;
-      u.onerror = (e) => console.warn("[TTS] error:", e.error || e, "text:", text);
+      let started = false;
       u.onstart = () => {
-        // Chrome bug workaround: loop resume để tránh bị cắt ở 15s
+        started = true;
         if (chromeKeepAliveTimer) clearInterval(chromeKeepAliveTimer);
         chromeKeepAliveTimer = setInterval(() => {
           if (!synth.speaking) { clearInterval(chromeKeepAliveTimer); chromeKeepAliveTimer = null; return; }
@@ -352,13 +361,45 @@
       };
       u.onend = () => {
         if (chromeKeepAliveTimer) { clearInterval(chromeKeepAliveTimer); chromeKeepAliveTimer = null; }
+        cb && cb(null);
+      };
+      u.onerror = (e) => {
+        console.warn("[TTS web] error:", e.error || e, "text:", text);
+        cb && cb(new Error(e.error || "tts-error"));
       };
       synth.speak(u);
+      // Auto-fallback nếu không fire onstart trong 700ms
+      setTimeout(() => {
+        if (!started) {
+          console.warn("[TTS web] no onstart after 700ms, assume silent, fallback");
+          try { synth.cancel(); } catch {}
+          cb && cb(new Error("silent"));
+        }
+      }, 700);
     } catch (e) {
-      console.warn("[TTS] failed:", e);
+      console.warn("[TTS web] failed:", e);
+      cb && cb(e);
     }
   }
-  let chromeKeepAliveTimer = null;
+
+  // Google Translate unofficial TTS — trả về MP3 qua CDN
+  function speakGoogle(text) {
+    if (!googleAudio) return;
+    try {
+      googleAudio.pause();
+      const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(text)}&tl=zh-CN&client=tw-ob`;
+      googleAudio.src = url;
+      googleAudio.play().catch((err) => {
+        console.warn("[TTS google] play() rejected:", err);
+        // Fallback phụ: Youdao
+        const alt = `https://dict.youdao.com/dictvoice?audio=${encodeURIComponent(text)}&le=zh`;
+        googleAudio.src = alt;
+        googleAudio.play().catch((err2) => console.warn("[TTS youdao] also failed:", err2));
+      });
+    } catch (e) {
+      console.warn("[TTS google] failed:", e);
+    }
+  }
 
   // Init voice với retry aggressive (một số browser load voices chậm)
   if (synth) {
@@ -732,6 +773,19 @@
     state.autoplay = autoplayCheck.checked;
     saveState();
   });
+
+  // Toggle Google TTS
+  useGoogleCheck.checked = state.useGoogleTts;
+  useGoogleCheck.addEventListener("change", () => {
+    state.useGoogleTts = useGoogleCheck.checked;
+    saveState();
+  });
+
+  // Test buttons (luôn có trong HTML, không inject)
+  testWebBtn.addEventListener("click", () => speakWeb("你好", (err) => {
+    if (err) alert("❌ Giọng máy không hoạt động: " + err.message + "\nThử bật '🌐 Google TTS' trong topbar.");
+  }));
+  testGoogleBtn.addEventListener("click", () => speakGoogle("你好"));
 
   // Backup / Restore
   backupBtn.addEventListener("click", () => {
