@@ -228,19 +228,25 @@
       const lang = (v.lang || "").toLowerCase().replace("_", "-");
       return lang.startsWith("zh") || lang.startsWith("cmn");
     });
+    // Ưu tiên theo thứ tự: giọng Mandarin China (zh-CN) → Taiwan (zh-TW) → Cantonese
     const preferred = [
-      /tingting|mei-?jia|sin-?ji/i,                       // macOS
-      /xiaoxiao|yaoyao|kangkang|huihui/i,                 // Windows
-      /google.*(?:中国|mandarin|普通话|zh[-_]cn)/i,         // Chrome Google
+      /tingting|ting-?ting/i,                             // macOS Mandarin (zh-CN)
+      /xiaoxiao|yaoyao|kangkang|huihui/i,                 // Windows Mandarin
+      /google.*(?:中国|mandarin|普通话|zh[-_]cn)/i,         // Chrome Google Mandarin
       /中国大陆/,
+      /mei-?jia/i,                                        // macOS Taiwan (zh-TW) — fallback
+      /sin-?ji/i,                                         // macOS Cantonese — last resort
     ];
     let picked = null;
     for (const re of preferred) {
       picked = allZhVoices.find((x) => re.test(x.name));
       if (picked) break;
     }
+    // Nếu regex không match ai, ưu tiên zh-CN; nếu không có thì bất kỳ giọng Trung nào
     if (!picked && allZhVoices.length) {
-      picked = allZhVoices.find((v) => v.lang.toLowerCase().includes("zh-cn")) || allZhVoices[0];
+      picked = allZhVoices.find((v) => /zh-cn/i.test(v.lang))
+            || allZhVoices.find((v) => /zh/i.test(v.lang))
+            || allZhVoices[0];
     }
     zhVoice = picked || null;
     updateVoiceInfo();
