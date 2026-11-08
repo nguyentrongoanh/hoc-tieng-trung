@@ -70,6 +70,13 @@
   const testWebBtn = $("testWebBtn");
   const testGoogleBtn = $("testGoogleBtn");
   const googleAudio = $("googleAudio");
+  const writeTestBtn = $("writeTestBtn");
+  const writingTestModal = $("writingTestModal");
+  const writingTestCloseBtn = $("writingTestCloseBtn");
+  const writingTestTarget = $("writingTestTarget");
+  const writingTestHintBtn = $("writingTestHint");
+  const writingTestAnimateBtn = $("writingTestAnimate");
+  const writingTestSkipBtn = $("writingTestSkip");
 
   // ---------- Storage ----------
   function loadState() {
@@ -1076,6 +1083,141 @@
     saveState();
     render();
     addForm.reset();
+  });
+
+  // ---------- Writing test (HanziWriter) ----------
+  let writer = null;
+  let writingChars = [];
+  let writingIndex = 0;
+  let writingMistakesTotal = 0;
+  let writingMistakesThisChar = 0;
+
+  function openWritingTest() {
+    const cur = getCurrentCard();
+    if (!cur || !cur.card || !cur.card.hanzi) {
+      alert("Chưa có thẻ để test.");
+      return;
+    }
+    const chars = Array.from(cur.card.hanzi).filter((c) => /[一-鿿]/.test(c));
+    if (chars.length === 0) {
+      alert("Thẻ không có chữ Hán để viết.");
+      return;
+    }
+    // Pinyin có thể là space-separated cho từ nhiều chữ
+    const pinyinParts = (cur.card.pinyin || "").trim().split(/\s+/);
+    writingChars = chars.map((ch, i) => ({
+      char: ch,
+      pinyin: pinyinParts[i] || cur.card.pinyin || "",
+      meaning: cur.card.meaning || "",
+    }));
+    writingIndex = 0;
+    writingMistakesTotal = 0;
+    writingMistakesThisChar = 0;
+    writingTestModal.classList.add("active");
+    document.body.style.overflow = "hidden";
+    startCharTest();
+  }
+
+  function closeWritingTest() {
+    writingTestModal.classList.remove("active");
+    document.body.style.overflow = "";
+    if (writer) {
+      try { writer.cancelQuiz(); } catch {}
+      writer = null;
+    }
+    writingTestTarget.innerHTML = "";
+  }
+
+  function startCharTest() {
+    if (typeof HanziWriter === "undefined") {
+      alert("Thư viện HanziWriter chưa tải xong. Chờ 1-2s rồi thử lại.");
+      return;
+    }
+    const cur = writingChars[writingIndex];
+    writingMistakesThisChar = 0;
+    $("writingTestProgress").textContent = `${writingIndex + 1}/${writingChars.length}`;
+    $("writingTestPinyin").textContent = cur.pinyin;
+    $("writingTestMeaning").textContent = cur.meaning;
+    $("writingTestMistakes").textContent = writingMistakesTotal;
+    $("writingTestStatus").textContent = "";
+    writingTestTarget.innerHTML = "";
+
+    writer = HanziWriter.create(writingTestTarget, cur.char, {
+      width: 260,
+      height: 260,
+      padding: 10,
+      showOutline: true,
+      showCharacter: false,
+      strokeColor: "#1e293b",
+      strokeHighlightColor: "#22c55e",
+      radicalColor: "#f59e0b",
+      outlineColor: "#94a3b8",
+      drawingColor: "#8b5cf6",
+      drawingWidth: 20,
+      strokeFadeDuration: 400,
+      charDataLoader: (char, onComplete, onError) => {
+        // Default loader — hanziWriter tự fetch JSON từ CDN của họ
+        return undefined;
+      },
+    });
+
+    writer.quiz({
+      showHintAfterMisses: 3,
+      highlightOnComplete: true,
+      onMistake: () => {
+        writingMistakesThisChar++;
+        writingMistakesTotal++;
+        $("writingTestMistakes").textContent = writingMistakesTotal;
+        $("writingTestStatus").textContent = "❌ Sai nét, thử lại";
+      },
+      onCorrectStroke: () => {
+        $("writingTestStatus").textContent = "✅ Đúng!";
+      },
+      onComplete: () => {
+        const grade = writingMistakesThisChar === 0 ? "🎉 Hoàn hảo!"
+                    : writingMistakesThisChar <= 2 ? "👍 Tốt!"
+                    : "✍️ Xong (nhiều sai)";
+        $("writingTestStatus").textContent = `${grade} (${writingMistakesThisChar} sai)`;
+        setTimeout(nextCharOrFinish, 1200);
+      },
+    });
+  }
+
+  function nextCharOrFinish() {
+    if (writer) { try { writer.cancelQuiz(); } catch {} writer = null; }
+    if (writingIndex + 1 < writingChars.length) {
+      writingIndex++;
+      startCharTest();
+    } else {
+      const total = writingChars.length;
+      const avgMistakes = (writingMistakesTotal / total).toFixed(1);
+      $("writingTestStatus").textContent =
+        `🏁 Xong ${total} chữ! Tổng ${writingMistakesTotal} nét sai (TB ${avgMistakes}/chữ). Nhấn ✕ hoặc Esc để đóng.`;
+    }
+  }
+
+  if (writeTestBtn) writeTestBtn.addEventListener("click", openWritingTest);
+  if (writingTestCloseBtn) writingTestCloseBtn.addEventListener("click", closeWritingTest);
+  if (writingTestModal) {
+    writingTestModal.addEventListener("click", (e) => {
+      if (e.target === writingTestModal) closeWritingTest();
+    });
+  }
+  if (writingTestHintBtn) writingTestHintBtn.addEventListener("click", () => {
+    if (writer) try { writer.highlightStroke(); } catch {}
+  });
+  if (writingTestAnimateBtn) writingTestAnimateBtn.addEventListener("click", () => {
+    if (writer) try { writer.cancelQuiz(); writer.animateCharacter(); } catch {}
+  });
+  if (writingTestSkipBtn) writingTestSkipBtn.addEventListener("click", () => {
+    nextCharOrFinish();
+  });
+
+  // Esc to close modal
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && writingTestModal.classList.contains("active")) {
+      closeWritingTest();
+    }
   });
 
   // ---------- Public API cho import.js ----------

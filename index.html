@@ -77,6 +77,13 @@
     <button class="nav-btn" id="nextBtn" aria-label="Thẻ kế">›</button>
   </main>
 
+  <!-- ✏️ Write test action -->
+  <section class="write-row">
+    <button id="writeTestBtn" class="write-test-btn" title="Kiểm tra viết tay từng nét chữ Hán">
+      ✏️ Thử viết chữ Hán của thẻ này
+    </button>
+  </section>
+
   <!-- 🎯 SRS rating buttons -->
   <section class="srs-actions" id="srsActions">
     <button class="rate" data-rating="1">
@@ -179,6 +186,33 @@
   </footer>
 </div>
 
+<!-- ✏️ Writing test modal -->
+<div class="writing-test-modal" id="writingTestModal" role="dialog" aria-modal="true" aria-labelledby="writingTestTitle">
+  <div class="writing-test-content">
+    <button class="writing-test-close" id="writingTestCloseBtn" title="Đóng (Esc)" aria-label="Đóng">✕</button>
+    <h3 id="writingTestTitle">✏️ Thử viết chữ Hán</h3>
+    <div class="writing-test-info">
+      <span>Chữ <strong id="writingTestProgress">1/1</strong></span>
+      <span>· pinyin <strong id="writingTestPinyin">—</strong></span>
+      <span>· <strong id="writingTestMeaning">—</strong></span>
+    </div>
+    <div class="writing-test-canvas" id="writingTestTarget"></div>
+    <div class="writing-test-stats">
+      Nét sai: <strong id="writingTestMistakes">0</strong>
+      <span class="muted" id="writingTestStatus"></span>
+    </div>
+    <div class="writing-test-actions">
+      <button id="writingTestHint" title="Tô đậm nét kế tiếp">💡 Gợi ý</button>
+      <button id="writingTestAnimate" title="Xem nét viết đúng">▶️ Xem viết</button>
+      <button id="writingTestSkip" title="Qua chữ kế">⏭ Bỏ qua</button>
+    </div>
+    <p class="muted" style="font-size: 12px; text-align: center; margin-top: 10px; line-height: 1.5;">
+      Dùng chuột / trackpad / cảm ứng vẽ từng nét theo thứ tự.<br>
+      Nét sai 3 lần sẽ được gợi ý tự động.
+    </p>
+  </div>
+</div>
+
 <!-- Libs -->
 <script type="module">
   import * as pdfjsLib from "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.0.379/build/pdf.min.mjs";
@@ -192,6 +226,7 @@
 <script src="https://cdn.jsdelivr.net/npm/pinyin-pro@3.19.6/dist/index.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/cnchar@3.2.6/cnchar.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/cnchar-radical@3.2.6/cnchar.radical.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/hanzi-writer@3.7.3/dist/hanzi-writer.min.js"></script>
 
 <script src="radicals.js"></script>
 <script src="srs.js"></script>
