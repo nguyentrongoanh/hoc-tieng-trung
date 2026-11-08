@@ -475,15 +475,61 @@ body {
   font-weight: 500;
   position: relative;
 }
-.example {
+.example-row {
   margin-top: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 92%;
+  position: relative;
+}
+.example-speak {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  border: 1px solid rgba(49, 46, 129, 0.35);
+  background: rgba(49, 46, 129, 0.1);
+  color: #312e81;
+  cursor: pointer;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: all 150ms;
+}
+.example-speak:hover { background: rgba(49, 46, 129, 0.2); transform: scale(1.1); }
+.example {
   font-family: "Noto Serif SC", serif;
   font-size: 15px;
   color: #3730a3;
   font-style: italic;
-  max-width: 90%;
-  position: relative;
-  line-height: 1.5;
+  line-height: 1.6;
+  text-align: left;
+}
+.example .sent-clickable {
+  cursor: pointer;
+  font-style: normal;
+  color: #4338ca;
+  border-bottom: 1px dashed rgba(67, 56, 202, 0.5);
+  padding: 0 1px;
+  transition: background 150ms;
+}
+.example .sent-clickable:hover {
+  background: rgba(79, 70, 229, 0.18);
+  border-bottom-color: #4338ca;
+}
+.example .sent-char-plain { opacity: 0.6; }
+
+/* Clickable rad-big */
+.rad-big.clickable {
+  cursor: pointer;
+  transition: transform 150ms, filter 150ms;
+}
+.rad-big.clickable:hover {
+  transform: scale(1.08);
+  filter: brightness(1.2);
 }
 
 /* ============ SRS buttons ============ */
@@ -547,6 +593,7 @@ body {
 .add-card,
 .edit-deck,
 .radicals-box,
+.related-box,
 .heatmap-box {
   background: var(--bg-elev-1);
   backdrop-filter: blur(20px);
@@ -569,7 +616,73 @@ body {
 .add-card { margin-bottom: 0; }
 .edit-deck { margin-top: 18px; }
 .radicals-box { margin-bottom: 18px; }
+.related-box { margin-bottom: 18px; }
 .heatmap-box { margin-bottom: 20px; }
+
+/* Related cards */
+.related-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  font-size: 14px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.related-header .muted { font-size: 12px; font-weight: 400; }
+.related-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: stretch;
+}
+.related-chip {
+  background: var(--bg-elev-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: 10px 12px;
+  cursor: pointer;
+  font-family: inherit;
+  color: var(--text);
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 140px;
+  max-width: 260px;
+  transition: all var(--t-fast);
+}
+.related-chip:hover {
+  background: var(--bg-elev-3);
+  border-color: var(--violet);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(139, 92, 246, 0.15);
+}
+.related-chip .rc-hanzi {
+  font-family: "Noto Serif SC", serif;
+  font-size: 20px;
+  font-weight: 700;
+  color: #fde68a;
+  line-height: 1.1;
+}
+.related-chip .rc-pinyin {
+  font-size: 12px;
+  color: var(--violet);
+  font-weight: 500;
+}
+.related-chip .rc-meaning {
+  font-size: 12px;
+  color: var(--text);
+  opacity: 0.85;
+}
+.related-chip .rc-source {
+  font-size: 10px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-top: 2px;
+}
+.rc-more { align-self: center; padding: 0 8px; font-size: 12px; }
 
 /* ============ Radicals panel ============ */
 .radicals-header {

@@ -57,6 +57,8 @@
   const heatmapEl = $("heatmap");
   const heatmapTotal = $("heatmapTotal");
   const radicalsList = $("radicalsList");
+  const relatedList = $("relatedList");
+  const speakExampleBtn = $("speakExampleBtn");
   const speakFrontBtn = $("speakFront");
   const speakBackBtn = $("speakBack");
   const autoplayCheck = $("autoplayCheck");
@@ -210,11 +212,13 @@
     renderEditList();
   }
 
+  let currentExampleText = "";
   function showCard(c, status) {
     hanziEl.textContent = c.hanzi;
     pinyinEl.textContent = c.pinyin || "(chưa có pinyin)";
     meaningEl.textContent = c.meaning || "(chưa có nghĩa — sửa ở bảng dưới)";
-    exampleEl.textContent = c.example || "";
+    currentExampleText = c.example || "";
+    renderExample(exampleEl, currentExampleText);
     const tag = tagLabel(status);
     cardTagFront.textContent = tag;
     cardTagBack.textContent = tag;
@@ -222,6 +226,7 @@
     cardTagBack.className = "card-tag tag-" + status;
     card.classList.remove("flipped");
     renderRadicals(c.hanzi);
+    renderRelated(c);
     // Autoplay: chỉ chạy khi đã có user gesture (browser block TTS trước đó)
     if (state.autoplay && userHasInteracted && c.hanzi && /[一-鿿]/.test(c.hanzi)) {
       setTimeout(() => speak(c.hanzi), 250);
@@ -487,10 +492,11 @@
       const residual = rInfo.radicalCount;    // nét ngoài bộ thủ
       const struct = rInfo.struct;
       const info = (typeof RADICALS !== "undefined" && RADICALS[rad]) || null;
+      const match = findExactCard(char);
       const row = document.createElement("div");
       row.className = "rad-row";
       row.innerHTML = `
-        <div class="rad-big">${escapeHtml(char)}</div>
+        <div class="rad-big ${match ? "clickable" : ""}" title="${match ? "Mở thẻ: " + char : ""}">${escapeHtml(char)}</div>
         <div class="rad-detail">
           <div class="rad-top">
             <button class="rad-speak" data-char="${escapeHtml(char)}" title="Nghe cách đọc">🔊</button>
@@ -510,6 +516,11 @@
         e.stopPropagation();
         speak(char);
       });
+      if (match) {
+        row.querySelector(".rad-big").addEventListener("click", () => {
+          jumpToCard(match.deckId, match.index);
+        });
+      }
       frag.appendChild(row);
     });
     radicalsList.appendChild(frag);
@@ -618,6 +629,124 @@
 
   function escapeHtml(s) {
     return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  }
+
+  // ---------- Tìm thẻ chứa chữ + nhảy tới ----------
+  function iterateAllCards(fn) {
+    Object.entries(DECKS).forEach(([deckId, d]) => {
+      d.cards.forEach((c, i) => fn(deckId, i, c, d.name));
+    });
+    state.customCards.forEach((c, i) => fn(CUSTOM_DECK_ID, i, c, "Của tôi"));
+    Object.entries(state.importedDecks).forEach(([deckId, d]) => {
+      d.cards.forEach((c, i) => fn(deckId, i, c, d.name));
+    });
+  }
+
+  function findCardsByChar(char) {
+    const results = [];
+    iterateAllCards((deckId, i, c, deckName) => {
+      if (c.hanzi && c.hanzi.includes(char)) {
+        results.push({ deckId, index: i, card: c, source: deckName });
+      }
+    });
+    return results;
+  }
+
+  // Tìm thẻ có hanzi KHỚP CHÍNH XÁC char trước, rồi mới tới thẻ chứa char
+  function findExactCard(char) {
+    let exact = null;
+    let partial = null;
+    iterateAllCards((deckId, i, c, deckName) => {
+      if (exact) return;
+      if (c.hanzi === char) exact = { deckId, index: i, card: c, source: deckName };
+      else if (!partial && c.hanzi && c.hanzi.includes(char)) {
+        partial = { deckId, index: i, card: c, source: deckName };
+      }
+    });
+    return exact || partial;
+  }
+
+  function jumpToCard(deckId, cardIndex) {
+    state.deckId = deckId;
+    state.index = cardIndex;
+    // Về browse mode để index ánh xạ đúng (không bị queue trong study mode)
+    state.mode = "browse";
+    if (!state.progress[deckId]) state.progress[deckId] = { order: null };
+    state.progress[deckId].order = null; // bỏ shuffle để index khớp
+    saveState();
+    populateDeckSelect();
+    render();
+  }
+
+  // Render example sentence với chars clickable
+  function renderExample(container, text) {
+    container.innerHTML = "";
+    for (const ch of text || "") {
+      const span = document.createElement("span");
+      span.textContent = ch;
+      if (/[一-鿿]/.test(ch)) {
+        const match = findExactCard(ch);
+        if (match) {
+          span.className = "sent-clickable";
+          span.title = `${match.card.hanzi} · ${match.card.pinyin} — ${match.card.meaning}\n(nguồn: ${match.source})`;
+          span.addEventListener("click", (e) => {
+            e.stopPropagation();
+            jumpToCard(match.deckId, match.index);
+          });
+        } else {
+          span.className = "sent-char-plain";
+        }
+      } else {
+        span.className = "sent-nonchar";
+      }
+      container.appendChild(span);
+    }
+  }
+
+  // Render related cards: tìm các thẻ chứa chars của thẻ hiện tại (trừ chính nó)
+  function renderRelated(currentCard) {
+    relatedList.innerHTML = "";
+    if (!currentCard || !currentCard.hanzi) {
+      relatedList.innerHTML = '<p class="muted">—</p>';
+      return;
+    }
+    const chars = Array.from(currentCard.hanzi).filter((c) => /[一-鿿]/.test(c));
+    const seen = new Set();
+    const items = [];
+    chars.forEach((ch) => {
+      findCardsByChar(ch).forEach((m) => {
+        const key = m.card.hanzi + "|" + m.card.pinyin;
+        const curKey = currentCard.hanzi + "|" + currentCard.pinyin;
+        if (key === curKey || seen.has(key)) return;
+        seen.add(key);
+        items.push(m);
+      });
+    });
+    if (items.length === 0) {
+      relatedList.innerHTML = '<p class="muted">Không tìm thấy thẻ nào chứa chữ của thẻ này.</p>';
+      return;
+    }
+    const frag = document.createDocumentFragment();
+    items.slice(0, 30).forEach((m) => {
+      const chip = document.createElement("button");
+      chip.className = "related-chip";
+      chip.innerHTML = `
+        <span class="rc-hanzi">${escapeHtml(m.card.hanzi)}</span>
+        <span class="rc-pinyin">${escapeHtml(m.card.pinyin || "")}</span>
+        <span class="rc-meaning">${escapeHtml((m.card.meaning || "").slice(0, 40))}</span>
+        <span class="rc-source">${escapeHtml(m.source)}</span>
+      `;
+      chip.title = `Mở thẻ: ${m.card.hanzi} (${m.source})`;
+      chip.addEventListener("click", () => jumpToCard(m.deckId, m.index));
+      frag.appendChild(chip);
+    });
+    if (items.length > 30) {
+      const more = document.createElement("span");
+      more.className = "muted rc-more";
+      more.textContent = `+${items.length - 30} thẻ nữa`;
+      frag.appendChild(more);
+    }
+    relatedList.appendChild(frag);
   }
 
   // ---------- Actions ----------
@@ -788,6 +917,13 @@
   };
   speakFrontBtn.addEventListener("click", (e) => { e.stopPropagation(); speakCurrent(speakFrontBtn); });
   speakBackBtn.addEventListener("click", (e) => { e.stopPropagation(); speakCurrent(speakBackBtn); });
+  // Nghe cả câu ví dụ
+  if (speakExampleBtn) {
+    speakExampleBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (currentExampleText) speak(currentExampleText);
+    });
+  }
 
   // Autoplay
   autoplayCheck.checked = state.autoplay;

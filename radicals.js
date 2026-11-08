@@ -17,6 +17,7 @@ const RADICALS = {
   "儿": { viName: "Nhi", viMeaning: "trẻ con, chân người" },
   "入": { viName: "Nhập", viMeaning: "vào" },
   "八": { viName: "Bát", viMeaning: "số tám, chia" },
+  "丷": { viName: "Bát", viMeaning: "biến thể bộ Bát (bên trên)" },
   "冂": { viName: "Quynh", viMeaning: "vùng biên, xa" },
   "冖": { viName: "Mịch", viMeaning: "trùm khăn, che" },
   "冫": { viName: "Băng", viMeaning: "nước đá (bộ 2 chấm)" },

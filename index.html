@@ -66,7 +66,10 @@
           <button class="speak-btn" id="speakBack" title="Phát âm (P)" aria-label="Phát âm">🔊</button>
           <div class="pinyin" id="pinyin">hàn</div>
           <div class="meaning" id="meaning">chữ Hán</div>
-          <div class="example" id="example"></div>
+          <div class="example-row">
+            <button class="example-speak" id="speakExampleBtn" title="Nghe cả câu">🔊</button>
+            <span class="example" id="example"></span>
+          </div>
         </div>
       </div>
     </div>
@@ -90,6 +93,15 @@
     </button>
   </section>
   <div class="srs-hint muted" id="srsHint">Lật thẻ để hiện các nút đánh giá.</div>
+
+  <!-- 🔗 Thẻ liên quan -->
+  <section class="related-box" id="relatedBox">
+    <div class="related-header">
+      <strong>🔗 Thẻ liên quan</strong>
+      <span class="muted">Chứa chữ của thẻ hiện tại — bấm để mở</span>
+    </div>
+    <div id="relatedList" class="related-list"></div>
+  </section>
 
   <!-- 📖 Bộ thủ -->
   <section class="radicals-box" id="radicalsBox">
