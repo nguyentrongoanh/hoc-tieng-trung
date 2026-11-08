@@ -33,6 +33,7 @@
   const resetBtn = $("resetBtn");
   const deleteDeckBtn = $("deleteDeckBtn");
   const card = $("card");
+  const cardInner = $("cardInner");
   const hanziEl = $("hanzi");
   const pinyinEl = $("pinyin");
   const meaningEl = $("meaning");
@@ -209,34 +210,39 @@
     cardTagBack.className = "card-tag tag-" + status;
     card.classList.remove("flipped");
     renderRadicals(c.hanzi);
-    if (state.autoplay && c.hanzi && /[一-鿿]/.test(c.hanzi)) {
-      // chút trễ để queue chạy sau khi card show
+    // Autoplay: chỉ chạy khi đã có user gesture (browser block TTS trước đó)
+    if (state.autoplay && userHasInteracted && c.hanzi && /[一-鿿]/.test(c.hanzi)) {
       setTimeout(() => speak(c.hanzi), 250);
     }
   }
 
   // ---------- Audio (TTS tiếng Trung) ----------
   let zhVoice = null;
+  let allZhVoices = [];
   const synth = typeof window.speechSynthesis !== "undefined" ? window.speechSynthesis : null;
 
   function pickZhVoice() {
     if (!synth) return;
     const voices = synth.getVoices() || [];
-    const zh = voices.filter((v) => {
+    allZhVoices = voices.filter((v) => {
       const lang = (v.lang || "").toLowerCase().replace("_", "-");
-      return lang.startsWith("zh-cn") || lang === "zh" || lang.startsWith("cmn");
+      return lang.startsWith("zh") || lang.startsWith("cmn");
     });
-    // Ưu tiên giọng chất lượng cao thường gặp trên macOS/Win/Chrome
     const preferred = [
-      /tingting/i, /meijia/i, /sinji/i,                         // macOS
-      /xiaoxiao/i, /yaoyao/i, /kangkang/i, /huihui/i,           // Microsoft
-      /google.*中国|google.*mandarin|google\s*普通话|google\s*zh/i, // Chrome Google
+      /tingting|mei-?jia|sin-?ji/i,                       // macOS
+      /xiaoxiao|yaoyao|kangkang|huihui/i,                 // Windows
+      /google.*(?:中国|mandarin|普通话|zh[-_]cn)/i,         // Chrome Google
+      /中国大陆/,
     ];
+    let picked = null;
     for (const re of preferred) {
-      const v = zh.find((x) => re.test(x.name));
-      if (v) { zhVoice = v; break; }
+      picked = allZhVoices.find((x) => re.test(x.name));
+      if (picked) break;
     }
-    if (!zhVoice && zh.length) zhVoice = zh[0];
+    if (!picked && allZhVoices.length) {
+      picked = allZhVoices.find((v) => v.lang.toLowerCase().includes("zh-cn")) || allZhVoices[0];
+    }
+    zhVoice = picked || null;
     updateVoiceInfo();
   }
 
@@ -246,45 +252,77 @@
       voiceInfo.textContent = "⚠️ Trình duyệt không hỗ trợ phát âm (Web Speech API).";
       return;
     }
-    if (!zhVoice) {
-      voiceInfo.innerHTML = '⚠️ Chưa tìm thấy giọng tiếng Trung trên máy. Cài thêm giọng trong cài đặt hệ thống (Mac: Settings → Spoken Content; Windows: Settings → Time & Language → Speech).';
-      return;
+    const totalVoices = (synth.getVoices() || []).length;
+    const parts = [];
+    if (zhVoice) {
+      parts.push(`🎙 Giọng: <strong>${zhVoice.name}</strong> (${zhVoice.lang})`);
+    } else if (totalVoices === 0) {
+      parts.push("⏳ Đang chờ trình duyệt load danh sách giọng...");
+    } else {
+      parts.push(`⚠️ Không có giọng tiếng Trung trong ${totalVoices} giọng khả dụng.`);
     }
-    voiceInfo.textContent = `🎙 Giọng: ${zhVoice.name} (${zhVoice.lang})`;
+    parts.push(`<button class="voice-test-btn" id="voiceTestBtn">🔊 Thử 你好</button>`);
+    voiceInfo.innerHTML = parts.join(" · ");
+    const btn = document.getElementById("voiceTestBtn");
+    if (btn) btn.addEventListener("click", () => speak("你好"));
   }
 
   function speak(text) {
-    if (!synth || !text) return;
-    // Re-pick voice on-demand nếu chưa có (một số browser load voices chậm)
+    if (!synth || !text) {
+      console.warn("[TTS] synth hoặc text không có");
+      return;
+    }
     if (!zhVoice) pickZhVoice();
     try {
       synth.cancel();
+      // Chrome bug: nếu đang paused thì resume
+      if (synth.paused) synth.resume();
       const u = new SpeechSynthesisUtterance(text);
       u.lang = "zh-CN";
       u.rate = 0.85;
       u.pitch = 1;
       if (zhVoice) u.voice = zhVoice;
-      u.onerror = (e) => console.warn("TTS error:", e.error || e);
+      u.onerror = (e) => console.warn("[TTS] error:", e.error || e, "text:", text);
+      u.onstart = () => {
+        // Chrome bug workaround: loop resume để tránh bị cắt ở 15s
+        if (chromeKeepAliveTimer) clearInterval(chromeKeepAliveTimer);
+        chromeKeepAliveTimer = setInterval(() => {
+          if (!synth.speaking) { clearInterval(chromeKeepAliveTimer); chromeKeepAliveTimer = null; return; }
+          synth.pause(); synth.resume();
+        }, 10000);
+      };
+      u.onend = () => {
+        if (chromeKeepAliveTimer) { clearInterval(chromeKeepAliveTimer); chromeKeepAliveTimer = null; }
+      };
       synth.speak(u);
     } catch (e) {
-      console.warn("TTS failed:", e);
+      console.warn("[TTS] failed:", e);
     }
   }
+  let chromeKeepAliveTimer = null;
 
-  // Thử pick voice lại sau 500ms + 1500ms vì một số browser (Chrome) load chậm
-  if (synth) {
-    setTimeout(pickZhVoice, 500);
-    setTimeout(pickZhVoice, 1500);
-  }
-
+  // Init voice với retry aggressive (một số browser load voices chậm)
   if (synth) {
     pickZhVoice();
-    if (typeof synth.onvoiceschanged !== "undefined") {
+    if (typeof synth.onvoiceschanged !== "undefined" || true) {
       synth.addEventListener("voiceschanged", pickZhVoice);
     }
+    // Retry mỗi 400ms trong 6s cho đến khi có zhVoice
+    let retryCount = 0;
+    const retry = setInterval(() => {
+      retryCount++;
+      if (!zhVoice) pickZhVoice();
+      if (zhVoice || retryCount > 15) clearInterval(retry);
+    }, 400);
   } else {
     updateVoiceInfo();
   }
+
+  // Theo dõi user gesture — speechSynthesis nhiều browser block trước gesture đầu tiên
+  let userHasInteracted = false;
+  const markInteracted = () => { userHasInteracted = true; };
+  document.addEventListener("click", markInteracted, { capture: true, once: true });
+  document.addEventListener("keydown", markInteracted, { capture: true, once: true });
 
   // ---------- Bộ thủ ----------
   // Dịch tên kết cấu chữ (struct) sang tiếng Việt
@@ -493,11 +531,28 @@
       easeAfter: next.ease,
     });
     saveState();
-    // Unflip card TRƯỚC khi đổi content để tránh user thấy đáp án thẻ kế flash trên back-face.
-    // Lúc card quay nửa vòng (~350ms), cả 2 mặt vuông góc với screen → invisible.
-    card.classList.remove("flipped");
     setSRSButtonsEnabled(false);
-    setTimeout(() => advance(rating), 350);
+    advanceWithFade(() => advance(rating));
+  }
+
+  // Fade out → snap unflip tức thì (không animation) → update content → fade in.
+  // Dùng cho rate + go: user KHÔNG thấy card quay 180°, chỉ thấy fade.
+  function advanceWithFade(updateFn) {
+    card.classList.add("fading");
+    setTimeout(() => {
+      // Tắt transition của card-inner để snap unflip không visible
+      cardInner.style.transition = "none";
+      card.classList.remove("flipped");
+      // Force reflow để browser áp dụng thay đổi ngay
+      void cardInner.offsetHeight;
+      // Update content (gọi advance → render → showCard)
+      updateFn();
+      // Reset transition và fade in ở frame kế tiếp
+      requestAnimationFrame(() => {
+        cardInner.style.transition = "";
+        card.classList.remove("fading");
+      });
+    }, 180);
   }
 
   function advance(lastRating) {
@@ -527,13 +582,8 @@
     if (cards.length === 0) return;
     state.index = (state.index + delta + cards.length) % cards.length;
     saveState();
-    if (card.classList.contains("flipped")) {
-      card.classList.remove("flipped");
-      setSRSButtonsEnabled(false);
-      setTimeout(render, 350);
-    } else {
-      render();
-    }
+    setSRSButtonsEnabled(false);
+    advanceWithFade(() => render());
   }
 
   function shuffle() {

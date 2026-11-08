@@ -331,7 +331,10 @@ body {
   aspect-ratio: 16 / 10;
   cursor: pointer;
   user-select: none;
+  opacity: 1;
+  transition: opacity 180ms ease-out;
 }
+.card.fading { opacity: 0; }
 .card-inner {
   position: relative;
   width: 100%;
@@ -711,7 +714,26 @@ body {
   text-align: center;
   margin-bottom: 22px;
   color: var(--text-dim);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
 }
+.voice-info strong { color: var(--violet); font-weight: 600; }
+.voice-test-btn {
+  background: rgba(167, 139, 250, 0.1);
+  border: 1px solid rgba(167, 139, 250, 0.3);
+  color: var(--violet);
+  padding: 4px 10px;
+  border-radius: var(--r-full);
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all var(--t-fast);
+}
+.voice-test-btn:hover { background: rgba(167, 139, 250, 0.2); }
 
 /* ============ Import ============ */
 .import-box p {
