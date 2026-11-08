@@ -30,9 +30,9 @@
         <input type="checkbox" id="autoplayCheck" />
         <span>🔊 Tự phát âm</span>
       </label>
-      <label class="autoplay-toggle" title="Phát âm qua Google Translate TTS thay cho giọng máy (cần internet nhưng ổn định hơn)">
+      <label class="autoplay-toggle" title="Dùng TTS online (Youdao) thay cho giọng máy. Cần internet nhưng ổn định hơn speechSynthesis vốn hay silent-fail trên Chrome/Mac.">
         <input type="checkbox" id="useGoogleCheck" />
-        <span>🌐 Google TTS</span>
+        <span>🌐 TTS online</span>
       </label>
       <button id="backupBtn" title="Tải backup toàn bộ dữ liệu ra file JSON">⬇ Backup</button>
       <button id="restoreBtn" title="Khôi phục từ file backup">⬆ Restore</button>
@@ -129,7 +129,7 @@
   <section class="voice-info muted">
     <span id="voiceInfo"></span>
     <button type="button" class="voice-test-btn" id="testWebBtn">🔊 Test giọng máy</button>
-    <button type="button" class="voice-test-btn" id="testGoogleBtn">🌐 Test Google TTS</button>
+    <button type="button" class="voice-test-btn" id="testGoogleBtn">🌐 Test TTS online</button>
   </section>
   <audio id="googleAudio" preload="none"></audio>
 

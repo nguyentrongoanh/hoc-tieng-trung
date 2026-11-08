@@ -11,7 +11,8 @@
   if (!state.progress) state.progress = {};      // { deckId: { order } } — dùng cho browse shuffle
   if (!state.mode) state.mode = "study";         // "study" | "browse"
   if (typeof state.autoplay !== "boolean") state.autoplay = false;
-  if (typeof state.useGoogleTts !== "boolean") state.useGoogleTts = false;
+  // Default bật TTS online — speechSynthesis trên Chrome/Mac rất hay silent fail
+  if (typeof state.useGoogleTts !== "boolean") state.useGoogleTts = true;
   if (typeof state.index !== "number") state.index = 0;
 
   const allDeckIds = () => [
@@ -350,9 +351,9 @@
       u.rate = 0.85;
       u.pitch = 1;
       if (zhVoice) u.voice = zhVoice;
-      let started = false;
+      let startedAt = null;
       u.onstart = () => {
-        started = true;
+        startedAt = Date.now();
         if (chromeKeepAliveTimer) clearInterval(chromeKeepAliveTimer);
         chromeKeepAliveTimer = setInterval(() => {
           if (!synth.speaking) { clearInterval(chromeKeepAliveTimer); chromeKeepAliveTimer = null; return; }
@@ -361,7 +362,14 @@
       };
       u.onend = () => {
         if (chromeKeepAliveTimer) { clearInterval(chromeKeepAliveTimer); chromeKeepAliveTimer = null; }
-        cb && cb(null);
+        const duration = startedAt ? Date.now() - startedAt : 0;
+        // "你好" speak phải tối thiểu ~400ms. Nếu onend fire quá nhanh → silent fail
+        if (startedAt && duration < 150) {
+          console.warn("[TTS web] silent-success (onend quá nhanh, duration=" + duration + "ms)");
+          cb && cb(new Error("silent-success"));
+        } else {
+          cb && cb(null);
+        }
       };
       u.onerror = (e) => {
         console.warn("[TTS web] error:", e.error || e, "text:", text);
@@ -370,10 +378,10 @@
       synth.speak(u);
       // Auto-fallback nếu không fire onstart trong 700ms
       setTimeout(() => {
-        if (!started) {
+        if (!startedAt) {
           console.warn("[TTS web] no onstart after 700ms, assume silent, fallback");
           try { synth.cancel(); } catch {}
-          cb && cb(new Error("silent"));
+          cb && cb(new Error("no-onstart"));
         }
       }, 700);
     } catch (e) {
@@ -382,22 +390,23 @@
     }
   }
 
-  // Google Translate unofficial TTS — trả về MP3 qua CDN
+  // Online TTS — Youdao primary (ổn định trong browser), Google fallback.
+  // Google translate_tts hiện trả về MP3 với token-check, Chrome từ chối với
+  // MEDIA_ELEMENT_ERROR: Format error. Youdao vẫn hoạt động tốt.
   function speakGoogle(text) {
     if (!googleAudio) return;
+    const youdaoUrl = `https://dict.youdao.com/dictvoice?audio=${encodeURIComponent(text)}&le=zh`;
+    const googleUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(text)}&tl=zh-CN&client=tw-ob`;
     try {
       googleAudio.pause();
-      const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(text)}&tl=zh-CN&client=tw-ob`;
-      googleAudio.src = url;
+      googleAudio.src = youdaoUrl;
       googleAudio.play().catch((err) => {
-        console.warn("[TTS google] play() rejected:", err);
-        // Fallback phụ: Youdao
-        const alt = `https://dict.youdao.com/dictvoice?audio=${encodeURIComponent(text)}&le=zh`;
-        googleAudio.src = alt;
-        googleAudio.play().catch((err2) => console.warn("[TTS youdao] also failed:", err2));
+        console.warn("[TTS youdao] play() rejected, thử Google:", err);
+        googleAudio.src = googleUrl;
+        googleAudio.play().catch((err2) => console.warn("[TTS google] also failed:", err2));
       });
     } catch (e) {
-      console.warn("[TTS google] failed:", e);
+      console.warn("[TTS online] failed:", e);
     }
   }
 
@@ -800,23 +809,22 @@
   testGoogleBtn.addEventListener("click", () => {
     if (!googleAudio) { alert("❌ Không có audio element"); return; }
     let resolved = false;
-    googleAudio.onplaying = () => {
+    // onplaying fire khi audio bắt đầu có âm — kể cả Youdao fallback sau khi Google fail
+    const onPlaying = () => {
       if (resolved) return;
       resolved = true;
-      alert("✅ Google TTS hoạt động!\n→ Tick '🌐 Google TTS' trong topbar để app luôn dùng Google.");
+      googleAudio.removeEventListener("playing", onPlaying);
+      alert("✅ TTS online hoạt động!\nApp đã mặc định dùng cái này (toggle '🌐 TTS online' trong topbar).");
     };
-    googleAudio.onerror = () => {
-      if (resolved) return;
-      resolved = true;
-      alert("❌ Google TTS fail. Thử Youdao:\n" + googleAudio.error?.message);
-    };
+    googleAudio.addEventListener("playing", onPlaying);
     speakGoogle("你好");
     setTimeout(() => {
       if (!resolved) {
         resolved = true;
-        alert("⏱ Google TTS timeout 3s — có thể do CORS hoặc network. Thử lại hoặc check DevTools Network tab.");
+        googleAudio.removeEventListener("playing", onPlaying);
+        alert("⏱ TTS online timeout 4s — có thể CORS hoặc network bị block. Check DevTools Network tab.");
       }
-    }, 3000);
+    }, 4000);
   });
 
   // Backup / Restore
