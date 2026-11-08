@@ -11,8 +11,14 @@
   if (!state.progress) state.progress = {};      // { deckId: { order } } — dùng cho browse shuffle
   if (!state.mode) state.mode = "study";         // "study" | "browse"
   if (typeof state.autoplay !== "boolean") state.autoplay = false;
-  // Default bật TTS online — speechSynthesis trên Chrome/Mac rất hay silent fail
   if (typeof state.useGoogleTts !== "boolean") state.useGoogleTts = true;
+  // MIGRATION v1: user cũ đã có useGoogleTts=false → force true 1 lần
+  let migratedNow = false;
+  if (!state._ttsMigratedV1) {
+    state.useGoogleTts = true;
+    state._ttsMigratedV1 = true;
+    migratedNow = true;
+  }
   if (typeof state.index !== "number") state.index = 0;
 
   const allDeckIds = () => [
@@ -769,12 +775,19 @@
   deleteDeckBtn.addEventListener("click", deleteCurrentDeck);
 
   // Speaker
-  const speakCurrent = () => {
+  const speakCurrent = (btn) => {
     const cur = getCurrentCard();
-    if (cur && cur.card && cur.card.hanzi) speak(cur.card.hanzi);
+    if (cur && cur.card && cur.card.hanzi) {
+      // Visual feedback: pulse animation để user biết click đã register
+      if (btn) {
+        btn.classList.add("speak-pulse");
+        setTimeout(() => btn.classList.remove("speak-pulse"), 600);
+      }
+      speak(cur.card.hanzi);
+    }
   };
-  speakFrontBtn.addEventListener("click", (e) => { e.stopPropagation(); speakCurrent(); });
-  speakBackBtn.addEventListener("click", (e) => { e.stopPropagation(); speakCurrent(); });
+  speakFrontBtn.addEventListener("click", (e) => { e.stopPropagation(); speakCurrent(speakFrontBtn); });
+  speakBackBtn.addEventListener("click", (e) => { e.stopPropagation(); speakCurrent(speakBackBtn); });
 
   // Autoplay
   autoplayCheck.checked = state.autoplay;
@@ -945,6 +958,8 @@
   };
 
   // ---------- Init ----------
+  // Save ngay nếu migration v1 vừa chạy để persist qua refresh
+  if (migratedNow) saveState();
   populateDeckSelect();
   rebuildQueue();
   render();
