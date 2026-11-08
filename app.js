@@ -261,10 +261,63 @@
     } else {
       parts.push(`⚠️ Không có giọng tiếng Trung trong ${totalVoices} giọng khả dụng.`);
     }
-    parts.push(`<button class="voice-test-btn" id="voiceTestBtn">🔊 Thử 你好</button>`);
+    parts.push(`<button class="voice-test-btn" id="voiceTestBtn">🔊 Test + chẩn đoán</button>`);
     voiceInfo.innerHTML = parts.join(" · ");
     const btn = document.getElementById("voiceTestBtn");
-    if (btn) btn.addEventListener("click", () => speak("你好"));
+    if (btn) btn.addEventListener("click", diagnoseTTS);
+  }
+
+  // Chẩn đoán TTS: chạy test và hiện kết quả qua alert() để user thấy trực tiếp
+  function diagnoseTTS() {
+    const lines = [];
+    if (!synth) {
+      alert("❌ Trình duyệt không hỗ trợ speechSynthesis API.");
+      return;
+    }
+    const allVoices = synth.getVoices() || [];
+    const zhList = allVoices.filter((v) => /^zh|^cmn/i.test(v.lang));
+    lines.push(`Tổng số giọng khả dụng: ${allVoices.length}`);
+    lines.push(`Giọng Trung tìm thấy: ${zhList.length}`);
+    if (zhList.length) {
+      zhList.slice(0, 10).forEach((v, i) => lines.push(`  ${i + 1}. ${v.name} (${v.lang})`));
+    }
+    lines.push(`Giọng đang chọn: ${zhVoice ? zhVoice.name + " (" + zhVoice.lang + ")" : "(chưa có)"}`);
+    lines.push(`synth.speaking: ${synth.speaking}, paused: ${synth.paused}, pending: ${synth.pending}`);
+    lines.push(`User đã tương tác: ${userHasInteracted}`);
+    lines.push("");
+    lines.push("Đang thử phát '你好'...");
+
+    let fired = { start: false, end: false, error: null };
+    synth.cancel();
+    if (synth.paused) synth.resume();
+    const u = new SpeechSynthesisUtterance("你好");
+    u.lang = "zh-CN";
+    u.rate = 0.9;
+    if (zhVoice) u.voice = zhVoice;
+    u.onstart = () => { fired.start = true; };
+    u.onend = () => { fired.end = true; };
+    u.onerror = (e) => { fired.error = e.error || String(e); };
+    synth.speak(u);
+
+    setTimeout(() => {
+      lines.push(`Sau 2.5s → onstart: ${fired.start}, onend: ${fired.end}, error: ${fired.error || "không"}`);
+      if (!fired.start && !fired.error) {
+        lines.push("");
+        lines.push("⚠️ Không có sự kiện nào fire — khả năng cao:");
+        lines.push("  1. Browser block TTS (click vào trang trước rồi thử lại)");
+        lines.push("  2. OS chưa cài giọng tiếng Trung");
+        if (navigator.userAgent.includes("Mac")) {
+          lines.push("  Mac: System Settings → Accessibility → Spoken Content → System Voice → Manage Voices → Chinese");
+        }
+      } else if (fired.error) {
+        lines.push(`\n⚠️ TTS trả error: ${fired.error}`);
+      } else if (fired.start && !fired.end) {
+        lines.push("\n✅ Đã bắt đầu phát (có thể đang phát hoặc đã kết thúc rất nhanh).");
+      } else if (fired.start && fired.end) {
+        lines.push("\n✅ Phát xong bình thường. Nếu không nghe tiếng → kiểm tra loa/volume máy.");
+      }
+      alert(lines.join("\n"));
+    }, 2500);
   }
 
   function speak(text) {
