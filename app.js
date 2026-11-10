@@ -1181,10 +1181,9 @@
       drawingColor: "#8b5cf6",
       drawingWidth: 20,
       strokeFadeDuration: 400,
-      charDataLoader: (char, onComplete, onError) => {
-        // Default loader — hanziWriter tự fetch JSON từ CDN của họ
-        return undefined;
-      },
+      // KHÔNG truyền charDataLoader: để hanzi-writer dùng loader mặc định,
+      // tự fetch dữ liệu nét chữ từ CDN (hanzi-writer-data@2.0.1).
+      // (Truyền một hàm trả về undefined sẽ khiến dữ liệu không bao giờ load.)
     });
 
     writer.quiz({
@@ -1230,7 +1229,12 @@
     });
   }
   if (writingTestHintBtn) writingTestHintBtn.addEventListener("click", () => {
-    if (writer) try { writer.highlightStroke(); } catch {}
+    // Tô đậm nét hiện tại (nét kế tiếp cần viết) để gợi ý.
+    try {
+      if (writer && writer._quiz && typeof writer._quiz._currentStrokeIndex === "number") {
+        writer.highlightStroke(writer._quiz._currentStrokeIndex);
+      }
+    } catch {}
   });
   if (writingTestAnimateBtn) writingTestAnimateBtn.addEventListener("click", () => {
     if (writer) try { writer.cancelQuiz(); writer.animateCharacter(); } catch {}
