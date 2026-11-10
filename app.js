@@ -220,6 +220,7 @@
   }
 
   let currentExampleText = "";
+  let autoplayTimer = null;
   function showCard(c, status) {
     hanziEl.textContent = c.hanzi;
     pinyinEl.textContent = c.pinyin || "(chưa có pinyin)";
@@ -234,9 +235,11 @@
     card.classList.remove("flipped");
     renderRadicals(c.hanzi);
     renderRelated(c);
-    // Autoplay: chỉ chạy khi đã có user gesture (browser block TTS trước đó)
+    // Autoplay: chỉ chạy khi đã có user gesture (browser block TTS trước đó).
+    // Hủy timer cũ trước để tránh phát nhầm thẻ khi user lướt nhanh.
+    if (autoplayTimer) { clearTimeout(autoplayTimer); autoplayTimer = null; }
     if (state.autoplay && userHasInteracted && c.hanzi && /[一-鿿]/.test(c.hanzi)) {
-      setTimeout(() => speak(c.hanzi), 250);
+      autoplayTimer = setTimeout(() => { autoplayTimer = null; speak(c.hanzi); }, 250);
     }
   }
 
@@ -615,6 +618,7 @@
       tr.querySelectorAll("input").forEach((inp) => {
         inp.addEventListener("input", (e) => {
           cards[i][e.target.dataset.f] = e.target.value;
+          invalidateCardIndex();
           saveState();
         });
       });
@@ -623,6 +627,7 @@
         const key = SRS.cardKey(cards[i]);
         delete currentSRSMap()[key];
         cards.splice(i, 1);
+        invalidateCardIndex();
         state.progress[state.deckId].order = null;
         rebuildQueue();
         saveState();
@@ -639,6 +644,7 @@
   }
 
   // ---------- Tìm thẻ chứa chữ + nhảy tới ----------
+  // Duyệt mọi thẻ (mẫu + của tôi + import) theo thứ tự cố định.
   function iterateAllCards(fn) {
     Object.entries(DECKS).forEach(([deckId, d]) => {
       d.cards.forEach((c, i) => fn(deckId, i, c, d.name));
@@ -649,28 +655,45 @@
     });
   }
 
-  function findCardsByChar(char) {
-    const results = [];
+  // Cache chỉ mục "ký tự → danh sách thẻ chứa ký tự đó". Được xây "lười" một lần rồi
+  // tái sử dụng, giúp findCardsByChar/findExactCard trả về O(1) thay vì quét lại toàn
+  // bộ thẻ cho MỖI ký tự (trước đây O(chars × totalCards) mỗi lần render).
+  let cardIndexCache = null;
+
+  function invalidateCardIndex() {
+    cardIndexCache = null;
+  }
+
+  function buildCardIndex() {
+    if (cardIndexCache) return cardIndexCache;
+    const byChar = new Map(); // char -> [{deckId, index, card, source}]
+    const exact = new Map();  // hanzi -> {deckId, index, card, source} (lần gặp đầu tiên)
     iterateAllCards((deckId, i, c, deckName) => {
-      if (c.hanzi && c.hanzi.includes(char)) {
-        results.push({ deckId, index: i, card: c, source: deckName });
+      const m = { deckId, index: i, card: c, source: deckName };
+      const hanzi = c.hanzi || "";
+      if (hanzi && !exact.has(hanzi)) exact.set(hanzi, m);
+      for (const ch of hanzi) {
+        if (!/[一-鿿]/.test(ch)) continue;
+        if (!byChar.has(ch)) byChar.set(ch, []);
+        byChar.get(ch).push(m);
       }
     });
-    return results;
+    cardIndexCache = { byChar, exact };
+    return cardIndexCache;
+  }
+
+  function findCardsByChar(char) {
+    const idx = buildCardIndex();
+    return idx.byChar.get(char) || [];
   }
 
   // Tìm thẻ có hanzi KHỚP CHÍNH XÁC char trước, rồi mới tới thẻ chứa char
   function findExactCard(char) {
-    let exact = null;
-    let partial = null;
-    iterateAllCards((deckId, i, c, deckName) => {
-      if (exact) return;
-      if (c.hanzi === char) exact = { deckId, index: i, card: c, source: deckName };
-      else if (!partial && c.hanzi && c.hanzi.includes(char)) {
-        partial = { deckId, index: i, card: c, source: deckName };
-      }
-    });
-    return exact || partial;
+    const idx = buildCardIndex();
+    const exact = idx.exact.get(char);
+    if (exact) return exact;
+    const partial = idx.byChar.get(char);
+    return partial ? partial[0] : null;
   }
 
   function jumpToCard(deckId, cardIndex) {
@@ -876,6 +899,7 @@
       delete state.importedDecks[state.deckId];
       state.deckId = Object.keys(DECKS)[0];
     }
+    invalidateCardIndex();
     state.index = 0;
     rebuildQueue();
     saveState();
@@ -1007,6 +1031,7 @@
       const data = JSON.parse(text);
       if (!data || typeof data !== "object") throw new Error("Không phải JSON hợp lệ.");
       state = data;
+      invalidateCardIndex();
       // chuẩn hoá các trường còn thiếu
       if (!state.customCards) state.customCards = [];
       if (!state.importedDecks) state.importedDecks = {};
@@ -1074,6 +1099,7 @@
     const example = $("newExample").value.trim();
     if (!hanzi || !pinyin || !meaning) return;
     state.customCards.push({ hanzi, pinyin, meaning, example });
+    invalidateCardIndex();
     saveState();
     populateDeckSelect();
     deckSelect.value = CUSTOM_DECK_ID;
@@ -1224,6 +1250,7 @@
   window.addImportedDeck = function (name, cards) {
     const id = "imported_" + Date.now() + "_" + Math.floor(Math.random() * 1000);
     state.importedDecks[id] = { name, cards };
+    invalidateCardIndex();
     saveState();
     populateDeckSelect();
     deckSelect.value = id;

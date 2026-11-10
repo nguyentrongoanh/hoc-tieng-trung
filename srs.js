@@ -82,7 +82,9 @@
   }
 
   function isNew(state) {
-    return !state || state.reps === 0 && (!state.nextReviewAt || state.nextReviewAt === 0);
+    // `reps === 0` cùng `nextReviewAt` rỗng → thẻ chưa từng học.
+    // (Dấu ngoặc để tránh nhầm lẫn thứ tự ưu tiên giữa || và &&.)
+    return !state || (state.reps === 0 && (!state.nextReviewAt || state.nextReviewAt === 0));
   }
 
   function isMature(state) {
