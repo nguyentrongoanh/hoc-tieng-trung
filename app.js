@@ -12,6 +12,7 @@
   if (!state.mode) state.mode = "study";         // "study" | "browse"
   if (typeof state.autoplay !== "boolean") state.autoplay = false;
   if (typeof state.useGoogleTts !== "boolean") state.useGoogleTts = true;
+  if (typeof state.onboarded !== "boolean") state.onboarded = false;
   // MIGRATION v1: user cũ đã có useGoogleTts=false → force true 1 lần
   let migratedNow = false;
   if (!state._ttsMigratedV1) {
@@ -77,6 +78,12 @@
   const writingTestHintBtn = $("writingTestHint");
   const writingTestAnimateBtn = $("writingTestAnimate");
   const writingTestSkipBtn = $("writingTestSkip");
+  const writingTestOutlineBtn = $("writingTestOutline");
+  const settingsBtn = $("settingsBtn");
+  const settingsMenu = $("settingsMenu");
+  const onboardingModal = $("onboardingModal");
+  const onboardingCloseBtn = $("onboardingCloseBtn");
+  const greetingEl = $("greeting");
 
   // ---------- Storage ----------
   function loadState() {
@@ -131,10 +138,22 @@
     }
   }
 
+  // Fisher–Yates: trả về mảng MỚI đã trộn ngẫu nhiên.
+  function shuffleArray(arr) {
+    const a = arr.slice();
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
   function rebuildQueue() {
     ensureDeckBuckets();
     const cards = getDeckCards(state.deckId);
-    queue = SRS.buildQueue(cards, currentSRSMap());
+    // Trộn deck trước khi build để việc chọn 20 thẻ mới cũng ngẫu nhiên,
+    // rồi trộn lại queue để thẻ ôn và thẻ mới đan xen → mỗi lần vào Học là một thứ tự mới.
+    queue = shuffleArray(SRS.buildQueue(shuffleArray(cards), currentSRSMap()));
     queueIndex = 0;
   }
 
@@ -144,10 +163,10 @@
 
     const builtin = document.createElement("optgroup");
     builtin.label = "Bộ mẫu";
-    Object.entries(DECKS).forEach(([id, d]) => {
+    Object.entries(DECKS).forEach(([id, d], idx) => {
       const opt = document.createElement("option");
       opt.value = id;
-      opt.textContent = `${d.name} (${d.cards.length})`;
+      opt.textContent = idx === 0 ? `🎯 ${d.name} (${d.cards.length})` : `${d.name} (${d.cards.length})`;
       builtin.appendChild(opt);
     });
     deckSelect.appendChild(builtin);
@@ -190,6 +209,7 @@
     deleteDeckBtn.style.display = isUserDeck(state.deckId) ? "" : "none";
     updateModeButtons();
     renderStats();
+    renderGreeting();
     renderHeatmap();
 
     const cards = getDeckCards(state.deckId);
@@ -205,9 +225,16 @@
 
     const cur = getCurrentCard();
     if (!cur) {
-      showCard({ hanzi: "🎉", pinyin: "", meaning: "Hết thẻ cần ôn hôm nay!", example: "Chuyển sang chế độ Lướt để xem lại toàn bộ." }, "done");
+      const doneStreak = SRS.streak(state.reviewLog);
+      const doneToday = SRS.reviewsToday(state.reviewLog);
+      showCard({
+        hanzi: "🎉",
+        pinyin: "",
+        meaning: "Hết thẻ cần ôn hôm nay!",
+        example: `Bạn đã ôn ${doneToday} thẻ hôm nay · chuỗi ${doneStreak} ngày 🔥. Chuyển sang chế độ Lướt để xem thêm.`,
+      }, "done");
       setSRSButtonsEnabled(false);
-      srsHint.textContent = "Không còn thẻ due. Quay lại sau, hoặc chọn bộ khác.";
+      srsHint.textContent = "Làm tốt lắm! Quay lại khi có thẻ mới cần ôn.";
       renderEditList();
       return;
     }
@@ -223,6 +250,10 @@
   let autoplayTimer = null;
   function showCard(c, status) {
     hanziEl.textContent = c.hanzi;
+    // Câu dài (bộ hội thoại) → thu nhỏ font để không tràn thẻ.
+    const hzLen = Array.from(c.hanzi || "").length;
+    hanziEl.classList.toggle("long", hzLen > 3 && hzLen <= 6);
+    hanziEl.classList.toggle("xlong", hzLen > 6);
     pinyinEl.textContent = c.pinyin || "(chưa có pinyin)";
     meaningEl.textContent = c.meaning || "(chưa có nghĩa — sửa ở bảng dưới)";
     currentExampleText = c.example || "";
@@ -358,6 +389,12 @@
       // Nếu speechSynthesis fail/silent → tự động fallback Google TTS
       if (err) speakGoogle(text);
     });
+  }
+
+  // Dừng mọi âm đang phát (tránh đọc chồng khi rời bước / nghe lại).
+  function stopSpeak() {
+    if (synth) { try { synth.cancel(); } catch {} }
+    if (googleAudio) { try { googleAudio.pause(); googleAudio.currentTime = 0; } catch {} }
   }
 
   let chromeKeepAliveTimer = null;
@@ -568,8 +605,18 @@
     $("statLearning").textContent = c.learning;
     $("statMature").textContent = c.mature;
     $("statToday").textContent = SRS.reviewsToday(state.reviewLog);
-    const r = SRS.retentionRate(state.reviewLog, 14);
-    $("statRetention").textContent = r == null ? "—" : Math.round(r * 100) + "%";
+    $("statStreak").textContent = SRS.streak(state.reviewLog);
+  }
+
+  function renderGreeting() {
+    if (!greetingEl) return;
+    const c = SRS.countsFor(getDeckCards(state.deckId), currentSRSMap());
+    const streakDays = SRS.streak(state.reviewLog);
+    let msg;
+    if (c.due > 0) msg = `Hôm nay cần ôn ${c.due} thẻ — cố lên! 💪`;
+    else if (c.new > 0) msg = `Không còn thẻ cũ, học ${c.new} thẻ mới nào! ✨`;
+    else msg = `Tuyệt vời, đã xong hết! 🔥 Chuỗi ${streakDays} ngày`;
+    greetingEl.textContent = msg;
   }
 
   function renderHeatmap() {
@@ -860,16 +907,19 @@
     advanceWithFade(() => render());
   }
 
+  // Sinh một thứ tự ngẫu nhiên (hoán vị) cho bộ, dùng cho chế độ Lướt.
+  function randomizeOrder(deckId) {
+    const n = getDeckCards(deckId).length;
+    if (n === 0) return;
+    const order = shuffleArray(Array.from({ length: n }, (_, i) => i));
+    if (!state.progress[deckId]) state.progress[deckId] = { order: null };
+    state.progress[deckId].order = order;
+  }
+
   function shuffle() {
     if (state.mode !== "browse") return;
-    const n = getDeckCards(state.deckId).length;
-    if (n === 0) return;
-    const order = Array.from({ length: n }, (_, i) => i);
-    for (let i = order.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [order[i], order[j]] = [order[j], order[i]];
-    }
-    state.progress[state.deckId].order = order;
+    if (getDeckCards(state.deckId).length === 0) return;
+    randomizeOrder(state.deckId);
     state.index = 0;
     saveState();
     render();
@@ -910,7 +960,11 @@
   function switchMode(mode) {
     state.mode = mode;
     state.index = 0;
-    if (mode === "study") rebuildQueue();
+    if (mode === "study") {
+      rebuildQueue(); // mỗi lần vào Học → trộn lại queue
+    } else {
+      randomizeOrder(state.deckId); // mỗi lần vào Lướt → trộn lại thứ tự
+    }
     saveState();
     render();
   }
@@ -919,6 +973,7 @@
   deckSelect.addEventListener("change", () => {
     state.deckId = deckSelect.value;
     state.index = 0;
+    randomizeOrder(state.deckId); // mỗi lần mở bộ → trộn ngẫu nhiên
     rebuildQueue();
     saveState();
     render();
@@ -933,6 +988,33 @@
   shuffleBtn.addEventListener("click", shuffle);
   resetBtn.addEventListener("click", resetDeck);
   deleteDeckBtn.addEventListener("click", deleteCurrentDeck);
+
+  // Menu cài đặt (⚙️)
+  if (settingsBtn && settingsMenu) {
+    settingsBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      settingsMenu.classList.toggle("open");
+    });
+    settingsMenu.addEventListener("click", (e) => {
+      if (e.target.closest("button")) settingsMenu.classList.remove("open");
+    });
+    document.addEventListener("click", (e) => {
+      if (!settingsMenu.contains(e.target) && !settingsBtn.contains(e.target)) {
+        settingsMenu.classList.remove("open");
+      }
+    });
+  }
+
+  // Hướng dẫn lần đầu (onboarding)
+  function closeOnboarding() {
+    if (onboardingModal) onboardingModal.classList.remove("active");
+    state.onboarded = true;
+    saveState();
+  }
+  if (onboardingCloseBtn) onboardingCloseBtn.addEventListener("click", closeOnboarding);
+  if (onboardingModal) onboardingModal.addEventListener("click", (e) => {
+    if (e.target === onboardingModal) closeOnboarding();
+  });
 
   // Speaker
   const speakCurrent = (btn) => {
@@ -1063,6 +1145,8 @@
   document.addEventListener("keydown", (e) => {
     const tag = document.activeElement.tagName;
     if (["INPUT", "TEXTAREA", "SELECT"].includes(tag)) return;
+    // Bỏ qua phím tắt khi đang mở modal (quiz / viết / onboarding)
+    if (document.querySelector(".quiz-modal.active, .writing-test-modal.active, .onboarding-modal.active")) return;
     switch (e.key) {
       case " ":
         e.preventDefault();
@@ -1117,6 +1201,7 @@
   let writingIndex = 0;
   let writingMistakesTotal = 0;
   let writingMistakesThisChar = 0;
+  let writingShowOutline = false;
 
   function openWritingTest() {
     const cur = getCurrentCard();
@@ -1161,6 +1246,12 @@
     }
     const cur = writingChars[writingIndex];
     writingMistakesThisChar = 0;
+    // Mặc định tự viết không có nét mờ hướng dẫn.
+    writingShowOutline = false;
+    if (writingTestOutlineBtn) {
+      writingTestOutlineBtn.textContent = "👁 Nét mờ";
+      writingTestOutlineBtn.classList.remove("on");
+    }
     $("writingTestProgress").textContent = `${writingIndex + 1}/${writingChars.length}`;
     $("writingTestPinyin").textContent = cur.pinyin;
     $("writingTestMeaning").textContent = cur.meaning;
@@ -1172,7 +1263,7 @@
       width: 260,
       height: 260,
       padding: 10,
-      showOutline: true,
+      showOutline: false,
       showCharacter: false,
       strokeColor: "#1e293b",
       strokeHighlightColor: "#22c55e",
@@ -1221,6 +1312,21 @@
     }
   }
 
+  // Bật/tắt nét mờ hướng dẫn (outline) của chữ đang viết.
+  function setWritingOutline(show) {
+    writingShowOutline = show;
+    if (writer) {
+      try {
+        if (show) writer.showOutline();
+        else writer.hideOutline();
+      } catch {}
+    }
+    if (writingTestOutlineBtn) {
+      writingTestOutlineBtn.textContent = show ? "👁 Ẩn nét mờ" : "👁 Nét mờ";
+      writingTestOutlineBtn.classList.toggle("on", show);
+    }
+  }
+
   if (writeTestBtn) writeTestBtn.addEventListener("click", openWritingTest);
   if (writingTestCloseBtn) writingTestCloseBtn.addEventListener("click", closeWritingTest);
   if (writingTestModal) {
@@ -1228,6 +1334,9 @@
       if (e.target === writingTestModal) closeWritingTest();
     });
   }
+  if (writingTestOutlineBtn) writingTestOutlineBtn.addEventListener("click", () => {
+    setWritingOutline(!writingShowOutline);
+  });
   if (writingTestHintBtn) writingTestHintBtn.addEventListener("click", () => {
     // Tô đậm nét hiện tại (nét kế tiếp cần viết) để gợi ý.
     try {
@@ -1266,10 +1375,63 @@
     return id;
   };
 
+  // ---------- Public API cho quiz.js ----------
+  window.QuizData = {
+    currentDeckCards() { return getDeckCards(state.deckId); },
+    allCards() {
+      const out = [];
+      iterateAllCards((deckId, i, c) => out.push(c));
+      return out;
+    },
+    speak(text) { speak(text); },
+  };
+
+  // ---------- Public API cho lesson.js (bài học Hôm nay) ----------
+  window.App = {
+    speak(text) { speak(text); },
+    stopSpeak() { stopSpeak(); },
+    // Tổng số thẻ đến hạn trên MỌI bộ (kể cả bộ tự tạo/import).
+    dueCount() {
+      let total = 0;
+      allDeckIds().forEach((id) => {
+        const map = state.srs[id] || {};
+        total += SRS.countsFor(getDeckCards(id), map).due;
+      });
+      return total;
+    },
+    newCount() {
+      let total = 0;
+      allDeckIds().forEach((id) => {
+        const map = state.srs[id] || {};
+        total += SRS.countsFor(getDeckCards(id), map).new;
+      });
+      return total;
+    },
+    // Chuyển sang chế độ Học của bộ đầu tiên còn thẻ đến hạn.
+    goToReview() {
+      const target = allDeckIds().find((id) => {
+        const map = state.srs[id] || {};
+        return SRS.countsFor(getDeckCards(id), map).due > 0;
+      });
+      if (!target) return false;
+      state.deckId = target;
+      state.mode = "study";
+      state.index = 0;
+      rebuildQueue();
+      saveState();
+      populateDeckSelect();
+      render();
+      return true;
+    },
+  };
+
   // ---------- Init ----------
   // Save ngay nếu migration v1 vừa chạy để persist qua refresh
   if (migratedNow) saveState();
   populateDeckSelect();
+  randomizeOrder(state.deckId); // trộn ngẫu nhiên ngay khi mở app
   rebuildQueue();
   render();
+  // Onboarding cũ đã được thay bằng màn "Hôm nay" — không tự mở nữa.
+  // (giữ modal + handler để không phá HTML/CSS đang có)
 })();

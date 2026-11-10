@@ -159,6 +159,19 @@
     return good / recent.length;
   }
 
+  // Số ngày liên tiếp có ôn tập (chuỗi streak). Nếu hôm nay chưa ôn, tính từ hôm qua.
+  function streak(log, now = Date.now()) {
+    const days = new Set(log.map((r) => todayKey(r.t)));
+    let n = 0;
+    const d = new Date(now);
+    if (!days.has(todayKey(d.getTime()))) d.setDate(d.getDate() - 1);
+    while (days.has(todayKey(d.getTime()))) {
+      n++;
+      d.setDate(d.getDate() - 1);
+    }
+    return n;
+  }
+
   global.SRS = {
     defaultState,
     rate,
@@ -173,5 +186,6 @@
     reviewsByDay,
     reviewsToday,
     retentionRate,
+    streak,
   };
 })(window);

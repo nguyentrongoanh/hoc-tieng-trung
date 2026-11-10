@@ -16,39 +16,110 @@
 <div class="app">
   <header class="topbar">
     <h1>学中文 · Flashcard Tiếng Trung</h1>
+  </header>
+
+  <nav class="main-nav" id="mainNav" aria-label="Điều hướng chính">
+    <button class="nav-tab active" data-view="today">🏠 Hôm nay</button>
+    <button class="nav-tab" data-view="decks">🃏 Bộ thẻ</button>
+    <button class="nav-tab" data-view="phrases">💬 Giao tiếp</button>
+    <button class="nav-tab" data-view="progress">📊 Tiến độ</button>
+    <button class="nav-tab" data-view="settings">⚙️ Cài đặt</button>
+  </nav>
+
+  <!-- 🏠 Hôm nay -->
+  <section class="view" id="viewToday" aria-label="Hôm nay">
+    <div id="todayContent"></div>
+  </section>
+
+  <!-- 📖 Bài học -->
+  <section class="view" id="viewLesson" aria-label="Bài học" hidden>
+    <div id="lessonContent"></div>
+    <p class="lesson-kbd-hint" id="lessonKbdHint" hidden></p>
+  </section>
+
+  <!-- 💬 50 câu giao tiếp -->
+  <section class="view" id="viewPhrases" aria-label="50 câu giao tiếp" hidden>
+    <div id="phrasesContent"></div>
+  </section>
+
+  <!-- 📊 Tiến độ -->
+  <section class="view" id="viewProgress" aria-label="Tiến độ" hidden>
+    <h2 class="view-title">📊 Tiến độ của bạn</h2>
+    <section class="stats-grid">
+      <div class="stat-cell due"><div class="n" id="statDue">0</div><div class="l">Thẻ đến hạn</div></div>
+      <div class="stat-cell new"><div class="n" id="statNew">0</div><div class="l">Thẻ mới</div></div>
+      <div class="stat-cell learning"><div class="n" id="statLearning">0</div><div class="l">Đang học</div></div>
+      <div class="stat-cell mature"><div class="n" id="statMature">0</div><div class="l">Đã thuộc</div></div>
+      <div class="stat-cell today"><div class="n" id="statToday">0</div><div class="l">Đã ôn hôm nay</div></div>
+      <div class="stat-cell streak"><div class="n" id="statStreak">0</div><div class="l">🔥 Chuỗi ngày</div></div>
+    </section>
+    <p class="muted view-note">“Thẻ đến hạn” là số thẻ cần ôn hôm nay; “Đã ôn hôm nay” là số lượt bạn đã thực hiện.</p>
+    <section class="heatmap-box">
+      <div class="heatmap-header">
+        <strong>🔥 Hoạt động 90 ngày qua</strong>
+        <span class="muted" id="heatmapTotal"></span>
+      </div>
+      <div class="heatmap" id="heatmap"></div>
+      <div class="heatmap-legend muted">
+        ít
+        <span class="hc hc-0"></span>
+        <span class="hc hc-1"></span>
+        <span class="hc hc-2"></span>
+        <span class="hc hc-3"></span>
+        <span class="hc hc-4"></span>
+        nhiều
+      </div>
+    </section>
+  </section>
+
+  <!-- ⚙️ Cài đặt -->
+  <section class="view" id="viewSettings" aria-label="Cài đặt" hidden>
+    <h2 class="view-title">⚙️ Cài đặt</h2>
+    <section class="voice-info muted">
+      <span id="voiceInfo"></span>
+      <button type="button" class="voice-test-btn" id="testWebBtn">🔊 Test giọng máy</button>
+      <button type="button" class="voice-test-btn" id="testGoogleBtn">🌐 Test TTS online</button>
+    </section>
+    <section class="hotkeys muted">
+      <strong>Phím tắt:</strong>
+      <kbd>Space</kbd> lật ·
+      <kbd>P</kbd> phát âm ·
+      <kbd>1-4</kbd> Chưa nhớ/Hơi khó/Nhớ/Quá dễ ·
+      <kbd>←</kbd>/<kbd>→</kbd> thẻ trước/sau (Lướt) ·
+      <kbd>S</kbd> trộn
+    </section>
+  </section>
+
+  <!-- 🃏 Bộ thẻ (chế độ cũ) -->
+  <div class="view" id="viewDecks">
     <div class="deck-picker">
       <label for="deckSelect">Bộ thẻ:</label>
       <select id="deckSelect"></select>
       <div class="mode-toggle" role="tablist" aria-label="Chế độ">
-        <button id="modeStudyBtn" class="mode-btn active">📚 Học (due)</button>
+        <button id="modeStudyBtn" class="mode-btn active">📚 Học</button>
         <button id="modeBrowseBtn" class="mode-btn">👀 Lướt</button>
       </div>
-      <button id="shuffleBtn" title="Trộn thẻ (chế độ Lướt)">🔀 Trộn</button>
-      <button id="resetBtn" title="Đặt lại SRS + tiến độ bộ hiện tại">↺ Reset</button>
-      <button id="deleteDeckBtn" title="Xóa bộ hiện tại">🗑 Xóa</button>
-      <label class="autoplay-toggle" title="Tự động phát âm khi hiện thẻ">
-        <input type="checkbox" id="autoplayCheck" />
-        <span>🔊 Tự phát âm</span>
-      </label>
-      <label class="autoplay-toggle" title="Dùng TTS online (Youdao) thay cho giọng máy. Cần internet nhưng ổn định hơn speechSynthesis vốn hay silent-fail trên Chrome/Mac.">
-        <input type="checkbox" id="useGoogleCheck" />
-        <span>🌐 TTS online</span>
-      </label>
-      <button id="backupBtn" title="Tải backup toàn bộ dữ liệu ra file JSON">⬇ Backup</button>
-      <button id="restoreBtn" title="Khôi phục từ file backup">⬆ Restore</button>
-      <input type="file" id="restoreFile" accept="application/json" style="display:none" />
+      <button id="quizBtn" class="quiz-btn" title="Làm bài tập kiểm tra bộ hiện tại">🎯 Luyện tập</button>
+      <div class="settings-wrap">
+        <button id="settingsBtn" class="settings-btn" title="Cài đặt & tuỳ chọn">⚙️</button>
+        <div class="settings-menu" id="settingsMenu">
+          <button id="shuffleBtn" title="Trộn thẻ (chế độ Lướt)">🔀 Trộn thẻ</button>
+          <button id="resetBtn" title="Đặt lại tiến độ học bộ hiện tại">↺ Đặt lại tiến độ</button>
+          <button id="deleteDeckBtn" title="Xóa bộ hiện tại">🗑 Xóa bộ</button>
+          <label class="settings-item" title="Tự động phát âm khi hiện thẻ">
+            <input type="checkbox" id="autoplayCheck" />
+            <span>🔊 Tự phát âm</span>
+          </label>
+          <label class="settings-item" title="Dùng TTS online (giọng chuẩn, cần internet)">
+            <input type="checkbox" id="useGoogleCheck" />
+            <span>🌐 TTS online</span>
+          </label>
+          <button id="backupBtn" title="Tải backup toàn bộ dữ liệu">⬇ Backup dữ liệu</button>
+          <button id="restoreBtn" title="Khôi phục từ file backup">⬆ Restore</button>
+          <input type="file" id="restoreFile" accept="application/json" style="display:none" />
+        </div>
+      </div>
     </div>
-  </header>
-
-  <!-- 📊 Stats -->
-  <section class="stats-grid">
-    <div class="stat-cell due"><div class="n" id="statDue">0</div><div class="l">Đến hạn ôn</div></div>
-    <div class="stat-cell new"><div class="n" id="statNew">0</div><div class="l">Thẻ mới</div></div>
-    <div class="stat-cell learning"><div class="n" id="statLearning">0</div><div class="l">Đang học</div></div>
-    <div class="stat-cell mature"><div class="n" id="statMature">0</div><div class="l">Thành thạo</div></div>
-    <div class="stat-cell today"><div class="n" id="statToday">0</div><div class="l">Ôn hôm nay</div></div>
-    <div class="stat-cell retention"><div class="n" id="statRetention">—</div><div class="l">Retention 14d</div></div>
-  </section>
 
   <main class="card-area">
     <button class="nav-btn" id="prevBtn" aria-label="Thẻ trước">‹</button>
@@ -87,16 +158,16 @@
   <!-- 🎯 SRS rating buttons -->
   <section class="srs-actions" id="srsActions">
     <button class="rate" data-rating="1">
-      <span class="label">Again</span><span class="iv" id="ivAgain">—</span><span class="kbd">1</span>
+      <span class="label">Chưa nhớ</span><span class="iv" id="ivAgain">—</span><span class="kbd">1</span>
     </button>
     <button class="rate hard" data-rating="2">
-      <span class="label">Hard</span><span class="iv" id="ivHard">—</span><span class="kbd">2</span>
+      <span class="label">Hơi khó</span><span class="iv" id="ivHard">—</span><span class="kbd">2</span>
     </button>
     <button class="rate good" data-rating="3">
-      <span class="label">Good</span><span class="iv" id="ivGood">—</span><span class="kbd">3</span>
+      <span class="label">Nhớ</span><span class="iv" id="ivGood">—</span><span class="kbd">3</span>
     </button>
     <button class="rate easy" data-rating="4">
-      <span class="label">Easy</span><span class="iv" id="ivEasy">—</span><span class="kbd">4</span>
+      <span class="label">Quá dễ</span><span class="iv" id="ivEasy">—</span><span class="kbd">4</span>
     </button>
   </section>
   <div class="srs-hint muted" id="srsHint">Lật thẻ để hiện các nút đánh giá.</div>
@@ -119,37 +190,7 @@
     <div id="radicalsList"></div>
   </section>
 
-  <!-- 🔥 Heatmap -->
-  <section class="heatmap-box">
-    <div class="heatmap-header">
-      <strong>🔥 Hoạt động 90 ngày qua</strong>
-      <span class="muted" id="heatmapTotal"></span>
-    </div>
-    <div class="heatmap" id="heatmap"></div>
-    <div class="heatmap-legend muted">
-      ít
-      <span class="hc hc-0"></span>
-      <span class="hc hc-1"></span>
-      <span class="hc hc-2"></span>
-      <span class="hc hc-3"></span>
-      <span class="hc hc-4"></span>
-      nhiều
-    </div>
-  </section>
-
-  <section class="hotkeys muted">
-    <strong>Phím tắt:</strong>
-    <kbd>Space</kbd> lật ·
-    <kbd>P</kbd> phát âm ·
-    <kbd>1-4</kbd> Again/Hard/Good/Easy ·
-    <kbd>←</kbd>/<kbd>→</kbd> thẻ trước/sau (Lướt) ·
-    <kbd>S</kbd> trộn
-  </section>
-  <section class="voice-info muted">
-    <span id="voiceInfo"></span>
-    <button type="button" class="voice-test-btn" id="testWebBtn">🔊 Test giọng máy</button>
-    <button type="button" class="voice-test-btn" id="testGoogleBtn">🌐 Test TTS online</button>
-  </section>
+  <!-- (Heatmap, phím tắt và cài đặt giọng đã chuyển sang màn "Tiến độ" / "Cài đặt") -->
   <audio id="googleAudio" preload="none"></audio>
 
   <!-- 📥 Import -->
@@ -184,6 +225,7 @@
   <footer>
     <small>Dữ liệu SRS, tiến độ, thẻ và lịch sử ôn tập lưu trong trình duyệt (localStorage).</small>
   </footer>
+  </div><!-- /viewDecks -->
 </div>
 
 <!-- ✏️ Writing test modal -->
@@ -202,14 +244,78 @@
       <span class="muted" id="writingTestStatus"></span>
     </div>
     <div class="writing-test-actions">
+      <button id="writingTestOutline" title="Bật/tắt nét mờ hướng dẫn">👁 Nét mờ</button>
       <button id="writingTestHint" title="Tô đậm nét kế tiếp">💡 Gợi ý</button>
       <button id="writingTestAnimate" title="Xem nét viết đúng">▶️ Xem viết</button>
       <button id="writingTestSkip" title="Qua chữ kế">⏭ Bỏ qua</button>
     </div>
     <p class="muted" style="font-size: 12px; text-align: center; margin-top: 10px; line-height: 1.5;">
-      Dùng chuột / trackpad / cảm ứng vẽ từng nét theo thứ tự.<br>
-      Nét sai 3 lần sẽ được gợi ý tự động.
+      Tự viết từ trí nhớ (không nét mờ). Bấm "👁 Nét mờ" để xem nét hướng dẫn.<br>
+      Vẽ từng nét theo thứ tự; sai 3 lần sẽ được gợi ý tự động.
     </p>
+  </div>
+</div>
+
+<!-- 🎯 Quiz modal -->
+<div class="quiz-modal" id="quizModal" role="dialog" aria-modal="true" aria-label="Luyện tập">
+  <div class="quiz-content">
+    <button class="quiz-close" id="quizCloseBtn" title="Đóng (Esc)" aria-label="Đóng">✕</button>
+
+    <div class="quiz-screen" id="quizMenu">
+      <h3>🎯 Chọn bài tập</h3>
+      <p class="muted">Luyện tập bộ thẻ hiện tại.</p>
+      <div class="quiz-menu-grid">
+        <button class="quiz-mode-btn" data-mode="vi2han"><span class="qm-icon">🇻🇳→🇨🇳</span><span>Việt → Hán</span></button>
+        <button class="quiz-mode-btn" data-mode="han2vi"><span class="qm-icon">🇨🇳→🇻🇳</span><span>Hán → Việt</span></button>
+        <button class="quiz-mode-btn" data-mode="han2pinyin"><span class="qm-icon">🇨🇳→🔤</span><span>Hán → Pinyin</span></button>
+        <button class="quiz-mode-btn" data-mode="listen"><span class="qm-icon">🔊</span><span>Nghe → chọn</span></button>
+        <button class="quiz-mode-btn" data-mode="write"><span class="qm-icon">✏️</span><span>Viết chữ</span></button>
+        <button class="quiz-mode-btn" data-mode="build"><span class="qm-icon">🧩</span><span>Ghép câu</span></button>
+      </div>
+    </div>
+
+    <div class="quiz-screen" id="quizPlay" hidden>
+      <div class="quiz-top">
+        <span class="quiz-progress" id="quizProgress">1/10</span>
+        <span class="quiz-score" id="quizScore">Đúng: 0</span>
+      </div>
+      <div class="quiz-prompt" id="quizPrompt"></div>
+      <div class="quiz-write-area" id="quizWriteArea" hidden>
+        <div class="quiz-write-canvas" id="quizWriteTarget"></div>
+        <button class="quiz-outline-btn" id="quizWriteOutlineBtn">👁 Nét mờ</button>
+      </div>
+      <div class="quiz-build-area" id="quizBuildArea" hidden>
+        <div class="quiz-build-slots" id="quizBuildSlots"></div>
+        <div class="quiz-build-bank" id="quizBuildBank"></div>
+        <button class="quiz-build-check" id="quizBuildCheck" disabled>Kiểm tra</button>
+      </div>
+      <div class="quiz-options" id="quizOptions"></div>
+      <div class="quiz-feedback" id="quizFeedback"></div>
+    </div>
+
+    <div class="quiz-screen" id="quizSummary" hidden>
+      <h3>🏁 Kết quả</h3>
+      <div class="quiz-summary-score" id="quizSummaryScore"></div>
+      <div class="quiz-summary-actions">
+        <button id="quizReplayBtn">🔄 Chơi lại</button>
+        <button id="quizMenuBtn">🔙 Chọn bài khác</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 👋 Onboarding (lần đầu) -->
+<div class="onboarding-modal" id="onboardingModal" role="dialog" aria-modal="true" aria-label="Chào mừng">
+  <div class="onboarding-content">
+    <h2>👋 Chào mừng bạn đến với 学中文!</h2>
+    <p class="onboarding-lead">Học tiếng Trung bằng thẻ, mỗi ngày vài phút là đủ.</p>
+    <ol class="onboarding-steps">
+      <li><strong>Chọn bộ thẻ</strong> — bắt đầu với bộ có dấu 🎯.</li>
+      <li><strong>Nhìn chữ Hán</strong>, cố nhớ nghĩa và cách đọc.</li>
+      <li><strong>Lật thẻ</strong> rồi tự đánh giá: <em>Chưa nhớ / Hơi khó / Nhớ / Quá dễ</em>.</li>
+    </ol>
+    <p class="muted">Ứng dụng sẽ tự nhắc bạn ôn lại đúng lúc để nhớ lâu hơn.</p>
+    <button id="onboardingCloseBtn" class="onboarding-start">🚀 Bắt đầu học</button>
   </div>
 </div>
 
@@ -233,5 +339,9 @@
 <script src="decks.js"></script>
 <script src="app.js"></script>
 <script src="import.js"></script>
+<script src="quiz.js"></script>
+<script src="lesson.js"></script>
+<script src="phrases-data.js"></script>
+<script src="phrases.js"></script>
 </body>
 </html>
