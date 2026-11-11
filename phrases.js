@@ -25,7 +25,9 @@
   let HACKNAO = [];          // OCR nháp sách (mục 10)
   let EDITS = {};            // { page: {char, pinyin, hanviet, meaning} } — bản sửa của người dùng
   let editingEntry = null;   // { page, char, pinyin, hanviet, meaning, image, raw, words }
+  let openEntry = null;      // mục đang xem chi tiết (thẻ chữ)
   const EDITS_KEY = "flashcard_zh_dict_edits";
+  const VERIFIED = window.HACKNAO_VERIFIED || [];
 
   // ---------- Từ điển (mục 10, hạt giống từ 50 câu) ----------
   function buildDict() {
@@ -80,7 +82,8 @@
         <input id="dictSearch" class="dict-search" type="search" placeholder="Gõ chữ Hán, pinyin hoặc nghĩa (vd: 女儿 / nü'er / con gái)" />
         <div id="dictResults" class="dict-results"></div>
       </div>
-      ${renderEditPanel()}`;
+      ${renderEditPanel()}
+      ${renderEntryPanel()}`;
   }
 
   function searchDict(q) {
@@ -92,6 +95,12 @@
     const ql = q.toLowerCase();
 
     const out = [];
+    VERIFIED.forEach((v) => {
+      const hay = [v.hanzi, v.meaning, v.hanviet, (v.mnemonicVi || ""), ...(v.words || []).map((w) => w.h + (w.t || "") + w.hv + w.m)].join(" ").toLowerCase();
+      if (v.hanzi.includes(q) || hay.includes(q) || hay.includes(ql) || stripTones(v.pinyin).includes(qn)) {
+        out.push(Object.assign({ kind: "verified" }, v));
+      }
+    });
     DICT.forEach((d) => {
       if (d.text.includes(q) || d.meaning.toLowerCase().includes(ql) || stripTones(d.pinyin).includes(qn)) {
         out.push({ kind: "vocab", text: d.text, pinyin: d.pinyin, meaning: d.meaning });
@@ -111,6 +120,14 @@
 
     if (!out.length) { results.innerHTML = `<p class="muted">Không tìm thấy từ phù hợp.</p>`; return; }
     results.innerHTML = out.slice(0, 40).map((d) => {
+      if (d.kind === "verified") {
+        return `<button class="dict-item" data-open="${d.id}">
+          <span class="di-hanzi" lang="zh-CN">${esc(d.hanzi)}</span>
+          <span class="di-pinyin">${esc(d.pinyin)}</span>
+          <span class="di-meaning">${esc(d.meaning)}</span>
+          <span class="di-page">📖 mở thẻ</span>
+        </button>`;
+      }
       if (d.kind === "vocab") {
         return `<button class="dict-item" data-speak-item="${esc(d.text)}">
           <span class="di-hanzi" lang="zh-CN">${esc(d.text)}</span>
@@ -143,6 +160,30 @@
       <div class="edit-actions">
         <button class="btn btn-secondary" data-act="save-edit">💾 Lưu</button>
       </div>
+    </div>`;
+  }
+
+  function renderEntryPanel() {
+    if (!openEntry) return "";
+    const e = openEntry;
+    const words = (e.words || []).map((w) =>
+      `<div class="dict-item book">
+        <span class="di-hanzi" lang="zh-CN">${esc(w.h)}${w.t ? `<small class="di-trad">【${esc(w.t)}】</small>` : ""}</span>
+        <span class="di-pinyin">${esc(w.p)}</span>
+        <span class="di-meaning">${esc(w.hv)} · ${esc(w.m)}</span>
+      </div>`).join("");
+    return `<div class="chunk-panel edit-panel" role="dialog" aria-label="Thẻ chữ">
+      <div class="chunk-panel-head">
+        <strong>📖 Thẻ chữ</strong>
+        <button class="cp-close" data-act="close-entry" aria-label="Đóng">✕</button>
+      </div>
+      <div class="entry-main">
+        <div class="entry-hanzi" lang="zh-CN">${esc(e.hanzi)}</div>
+        <div class="entry-meta">${esc(e.pinyin)} · ${esc(e.hanviet)} · ${esc(e.meaning)}</div>
+      </div>
+      ${e.image ? `<img class="entry-img" src="${esc(e.image)}" alt="Minh hoạ chữ ${esc(e.hanzi)}" />` : ""}
+      ${e.mnemonicVi ? `<div class="entry-mnemonic"><strong>Mẹo nhớ:</strong> ${esc(e.mnemonicVi)}${e.needReview ? " <em class=\"warn\">(Cần soát)</em>" : ""}</div>` : ""}
+      ${words ? `<div class="entry-words"><strong>Từ ghép:</strong>${words}</div>` : ""}
     </div>`;
   }
 
@@ -256,6 +297,8 @@
     if (speakItem) { speak(speakItem.dataset.speakItem); return; }
     const editBtn = e.target.closest("[data-edit]");
     if (editBtn) { openEdit(parseInt(editBtn.dataset.edit, 10)); return; }
+    const openBtn = e.target.closest("[data-open]");
+    if (openBtn) { openEntry = VERIFIED.find((v) => v.id === parseInt(openBtn.dataset.open, 10)) || null; render(); return; }
     const chunk = e.target.closest("[data-ci]");
     if (chunk) { openChunk(parseInt(chunk.dataset.ci, 10)); return; }
     const act = e.target.closest("[data-act]");
@@ -268,6 +311,7 @@
       case "close-chunk": activeChunk = null; render(); break;
       case "close-edit": editingEntry = null; render(); break;
       case "save-edit": saveEdit(); break;
+      case "close-entry": openEntry = null; render(); break;
       case "prev": if (currentIndex > 0) { currentIndex--; resetForNew(); render(); } break;
       case "next": nextSentence(); break;
       case "toggle-review": toggleReview(); break;

@@ -1999,6 +1999,14 @@ select { appearance: none; -webkit-appearance: none; background-image: url("data
 .edit-input { width: 100%; padding: 9px 10px; border-radius: var(--r-md); border: 1px solid var(--border); background: var(--bg-elev-2); color: var(--text); font-size: 15px; font-family: inherit; }
 .edit-actions { display: flex; gap: 8px; justify-content: flex-end; }
 
+.entry-main { text-align: center; }
+.entry-hanzi { font-family: "Noto Serif SC", serif; font-size: 72px; line-height: 1.1; color: #2a1a0b; }
+.entry-meta { font-size: 17px; color: #312e81; font-weight: 600; margin-top: 4px; }
+.entry-img { width: 100%; max-height: 220px; object-fit: contain; border: 1px solid var(--border); border-radius: var(--r-md); background: #fff; }
+.entry-mnemonic { font-size: 15px; line-height: 1.5; }
+.entry-words { display: flex; flex-direction: column; gap: 6px; font-size: 14px; }
+.di-trad { color: var(--text-muted); font-size: 13px; }
+
 .phrase-theme:focus-visible,
 .chunk:focus-visible,
 .dict-item:focus-visible {
