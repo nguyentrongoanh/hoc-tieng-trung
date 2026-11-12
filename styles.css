@@ -2014,6 +2014,51 @@ select { appearance: none; -webkit-appearance: none; background-image: url("data
   outline-offset: 2px;
 }
 
+/* ============ Học qua hội thoại ============ */
+.conversation-page { max-width: 880px; margin: auto; padding-bottom: 48px; }
+.conversation-header { padding: 24px 0 20px; }
+.conversation-header h2 { margin: 8px 0; font-size: clamp(28px, 4vw, 40px); }
+.conversation-header p { color: var(--text-muted); line-height: 1.6; }
+.conversation-kicker { color: #c4b5fd !important; letter-spacing: .08em; font-size: 13px; font-weight: 700; }
+.conversation-steps { list-style: none; display: flex; gap: 8px; flex-wrap: wrap; padding: 0; margin: 20px 0 0; }
+.conversation-steps li { flex: 1; min-width: 100px; padding: 10px 12px; border-bottom: 3px solid var(--border); color: var(--text-muted); font-size: 14px; }
+.conversation-steps li.current { border-color: #a78bfa; color: #ddd6fe; font-weight: 700; }
+.conversation-steps li.done { border-color: #34d399; }
+.conversation-panel { border: 1px solid var(--border); background: var(--bg-elev-1); padding: clamp(18px, 4vw, 32px); border-radius: 22px; }
+.conversation-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin: 18px 0; }
+.conversation-panel .btn { min-height: 48px; font-size: 16px; white-space: normal; }
+.conversation-audio-status { color: #c4b5fd; min-height: 48px; font-size: 15px; line-height: 1.5; }
+.conversation-line { display: flex; align-items: baseline; gap: 16px; padding: 16px 0; border-bottom: 1px solid var(--border); }
+.conversation-speaker { color: #c4b5fd; font-weight: 800; font-size: 20px; }
+.conversation-hanzi { font: 500 clamp(25px, 4vw, 38px)/1.6 "Noto Serif SC", serif; color: var(--text); margin: 0; overflow-wrap: anywhere; }
+.conversation-pinyin { color: #c4b5fd; font-size: 21px; line-height: 1.6; }
+.conversation-translation { font-size: 19px; line-height: 1.7; }
+.conversation-chunks { display: flex; flex-wrap: wrap; gap: 8px; }
+.conversation-chunks .btn { font-size: 23px; }
+.conversation-explanation { margin-top: 14px; padding: 18px; border-left: 3px solid #a78bfa; background: rgba(139,92,246,.10); line-height: 1.8; font-size: 17px; }
+.conversation-help { margin: 18px 0; padding: 14px; border: 1px solid var(--border); border-radius: 12px; }
+.conversation-help summary { cursor: pointer; min-height: 32px; color: #c4b5fd; }
+.conversation-question { font-size: 23px; line-height: 1.5; }
+.conversation-options { display: grid; gap: 12px; }
+.conversation-options .btn { text-align: left; justify-content: flex-start; padding: 18px; font-size: 19px; }
+.conversation-options .btn:disabled { opacity: .6; cursor: default; }
+.conversation-options .selected { border: 2px solid #a78bfa; opacity: 1; }
+.conversation-feedback { line-height: 1.7; color: #fcd34d; font-size: 18px; }
+.conversation-note { color: var(--text-muted); font-size: 14px; line-height: 1.6; }
+.conversation-results { width: 100%; border-collapse: collapse; }
+.conversation-results th, .conversation-results td { padding: 16px 8px; border-bottom: 1px solid var(--border); text-align: left; font-size: 17px; }
+.conversation-results td { white-space: nowrap; color: #c4b5fd; font-size: 26px; font-weight: 700; }
+.conversation-home { border-color: rgba(167,139,250,.5); }
+.conversation-home h2 { font-size: 28px; margin: 10px 0; }
+.conversation-route { margin-top: 24px; padding-top: 18px; border-top: 1px solid var(--border); }
+.conversation-route p { color: var(--text-muted); line-height: 1.7; }
+@media (max-width: 600px) {
+  .conversation-actions .btn { flex: 1 1 auto; }
+  .conversation-panel { padding: 18px 14px; }
+  .conversation-home h2 { font-size: 25px; }
+  .conversation-steps li { min-width: 80px; font-size: 12px; }
+}
+
 /* ============ Kiểm tra đã thuộc ============ */
 .mastery-page { max-width: 900px; margin: 0 auto; padding: 10px 0 48px; }
 .mastery-head { text-align: center; margin-bottom: 22px; }
