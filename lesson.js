@@ -79,7 +79,7 @@
   }
 
   // ---------- Điều hướng view ----------
-  const VIEW_IDS = { today: "viewToday", lesson: "viewLesson", conversation: "viewConversation", decks: "viewDecks", mastery: "viewMastery", progress: "viewProgress", settings: "viewSettings", phrases: "viewPhrases" };
+  const VIEW_IDS = { today: "viewToday", lesson: "viewLesson", conversation: "viewConversation", sentences: "viewSentences", decks: "viewDecks", mastery: "viewMastery", progress: "viewProgress", settings: "viewSettings", phrases: "viewPhrases" };
   function setView(name) {
     if (name !== "conversation" && window.Conversation) window.Conversation.stop();
     currentView = name;
@@ -89,6 +89,7 @@
     if (name === "today" && window.Conversation) window.Conversation.home();
     if (name === "lesson") { renderLesson(); focusTask(); }
     if (name === "mastery" && window.Mastery) window.Mastery.open();
+    if (name === "sentences" && window.Sentences) window.Sentences.open();
     if (name === "phrases" && window.Phrases) window.Phrases.render();
     window.scrollTo(0, 0);
   }

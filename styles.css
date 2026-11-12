@@ -2014,6 +2014,18 @@ select { appearance: none; -webkit-appearance: none; background-image: url("data
   outline-offset: 2px;
 }
 
+/* ============ Đặt câu từ trí nhớ ============ */
+.sentence-page { max-width: 860px; margin: auto; padding: 10px 0 48px; }
+.sentence-page h2 { font-size: clamp(28px, 4vw, 40px); margin: 10px 0; }
+.sentence-detail { font-size: 17px; color: var(--text-muted); line-height: 1.7; }
+.sentence-prompt { font-size: clamp(26px, 4vw, 36px); line-height: 1.5; margin: 8px 0 28px; }
+.sentence-form label { display: block; font-size: 16px; margin-bottom: 12px; }
+.sentence-input { width: 100%; box-sizing: border-box; resize: vertical; padding: 18px; border: 2px solid var(--border-strong); border-radius: 14px; background: var(--bg-elev-2); color: var(--text); font: 30px/1.7 "Noto Serif SC", serif; }
+.sentence-input:focus { outline: 3px solid #a78bfa; outline-offset: 2px; }
+.sentence-feedback { border-top: 1px solid var(--border); padding-top: 20px; margin-top: 12px; }
+.sentence-model { color: #c4b5fd; font: 34px/1.6 "Noto Serif SC", serif; overflow-wrap: anywhere; }
+.sentence-page .btn { min-height: 48px; white-space: normal; }
+
 /* ============ Học qua hội thoại ============ */
 .conversation-page { max-width: 880px; margin: auto; padding-bottom: 48px; }
 .conversation-header { padding: 24px 0 20px; }
