@@ -51,6 +51,7 @@
   let audioStatus;
   let audioButton;
   let listened = false;
+  let onlineAudio = null;
 
   function save() {
     try { localStorage.setItem(STORAGE, JSON.stringify(state)); }
@@ -71,6 +72,7 @@
   }
   function stop() {
     audioToken += 1;
+    if (onlineAudio) { onlineAudio.pause(); onlineAudio = null; }
     window.speechSynthesis?.cancel();
     if (audioButton) audioButton.disabled = false;
     window.App?.stopSpeak();
@@ -78,8 +80,8 @@
   function play(lines, slow = false) {
     stop();
     const synth = window.speechSynthesis;
-    if (!synth) { audioStatus.textContent = "Thiết bị chưa hỗ trợ đọc tiếng Trung. Bạn có thể học phần giải nghĩa và quay lại phần nghe trên thiết bị khác."; return; }
-    const voice = synth.getVoices().find((v) => /^zh[-_]CN/i.test(v.lang)) || synth.getVoices().find((v) => /^zh/i.test(v.lang));
+    const voices = synth?.getVoices() || [];
+    const voice = voices.find((v) => /^zh[-_]CN/i.test(v.lang)) || voices.find((v) => /^zh/i.test(v.lang));
     const token = audioToken;
     audioButton.disabled = true;
     let index = 0;
@@ -94,6 +96,20 @@
       }
       const line = lines[index++];
       audioStatus.textContent = "Đang nghe · người " + line.speaker + " · lượt " + index + "/" + lines.length;
+      const failed = () => {
+        if (token !== audioToken) return;
+        audioButton.disabled = false;
+        audioStatus.textContent = "Chưa phát được âm thanh. Hãy kiểm tra kết nối rồi thử nghe lại.";
+      };
+      const online = () => {
+        if (token !== audioToken) return;
+        onlineAudio = new Audio("https://dict.youdao.com/dictvoice?audio=" + encodeURIComponent(line.text) + "&le=zh");
+        onlineAudio.playbackRate = slow ? 0.75 : 1;
+        onlineAudio.onended = next;
+        onlineAudio.onerror = failed;
+        onlineAudio.play().catch(failed);
+      };
+      if (!synth || !voice) { online(); return; }
       const utterance = new SpeechSynthesisUtterance(line.text);
       utterance.lang = "zh-CN";
       if (voice) utterance.voice = voice;
@@ -101,8 +117,7 @@
       utterance.onend = next;
       utterance.onerror = () => {
         if (token !== audioToken) return;
-        audioButton.disabled = false;
-        audioStatus.textContent = "Chưa phát được âm thanh. Hãy thử nghe lại hoặc kiểm tra giọng tiếng Trung trong thiết bị.";
+        online();
       };
       synth.speak(utterance);
     };
