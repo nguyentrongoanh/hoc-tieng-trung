@@ -2013,3 +2013,8 @@ select { appearance: none; -webkit-appearance: none; background-image: url("data
   outline: 3px solid var(--violet);
   outline-offset: 2px;
 }
+
+.mastery { width:min(92vw,32rem); box-sizing:border-box; padding:1.5rem; border:0; border-radius:1rem; background:#fff9ed; color:#272124; text-align:center; }
+.mastery::backdrop { background:#171327aa; }
+.mastery button,.mastery input { margin:.35rem; padding:.65rem 1rem; min-height:44px; border:1px solid #81735a; border-radius:.6rem; color:#282124; background:white; }
+.mastery button {cursor:pointer}
