@@ -1,129 +1,244 @@
-// Independent mastery exam for the selected deck.
+// Bài kiểm tra độc lập để xác nhận một thẻ đã thuộc.
 (() => {
-  const dialog = document.createElement('dialog');
-  dialog.className = 'mastery';
-  document.body.append(dialog);
-  let cards, pending, deck, record, current, writer, timer, deadline;
-  let phase = '', generation = 0;
-  const key = c => JSON.stringify([c.hanzi,c.meaning,c.pinyin]);
-  function screen(title, description) {
+  const content = document.getElementById("masteryContent");
+  const deckSelect = document.getElementById("deckSelect");
+  let cards = [], pending = [], deck, record = {}, current, writer, timer, ticker, deadline = 0;
+  let phase = "menu", generation = 0;
+  const key = (card) => JSON.stringify([card.hanzi, card.meaning, card.pinyin]);
+
+  function stopActiveTask() {
     clearTimeout(timer);
-    generation++;
+    clearInterval(ticker);
+    generation += 1;
     writer?.cancelQuiz();
     writer = null;
-    dialog.replaceChildren();
-    node('h2', title);
-    node('p', description);
   }
-  function node(tag, text) {
+
+  function element(tag, text, className, parent) {
     const el = document.createElement(tag);
-    el.textContent = text;
-    dialog.append(el);
+    if (text !== undefined) el.textContent = text;
+    if (className) el.className = className;
+    (parent || content).append(el);
     return el;
   }
-  function button(label, action) {
-    const b = node('button', label);
-    b.onclick = action;
-    return b;
+
+  function screen(eyebrow, title, description) {
+    stopActiveTask();
+    content.replaceChildren();
+    const shell = element("div", undefined, "mastery-page");
+    const head = element("header", undefined, "mastery-head", shell);
+    element("p", eyebrow, "mastery-eyebrow", head);
+    element("h2", title, "mastery-title", head);
+    if (description) element("p", description, "mastery-description", head);
+    return element("main", undefined, "mastery-stage", shell);
   }
+
+  function action(parent, label, handler, primary = false) {
+    const btn = element("button", label, "mastery-action " + (primary ? "mastery-action-primary" : "mastery-action-secondary"), parent);
+    btn.type = "button";
+    btn.addEventListener("click", handler);
+    return btn;
+  }
+
   function shuffled(items) {
     const result = [...items];
-    for (let i=result.length-1;i>0;i--) {
-      const j=Math.floor(Math.random()*(i+1));
-      [result[i],result[j]]=[result[j],result[i]];
+    for (let i = result.length - 1; i > 0; i -= 1) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [result[i], result[j]] = [result[j], result[i]];
     }
     return result;
   }
-  function normalize(s) {
-    return s.toLowerCase().normalize('NFC').replace(/u:|v/g,'ü')
-      .replace(/([a-zü]+)([1-5])/g,(_,word,tone)=>{
-        const index = word.includes('a') ? word.indexOf('a') : word.includes('e') ? word.indexOf('e') :
-          word.includes('ou') ? word.indexOf('o') : word.search(/[aeiouü](?!.*[aeiouü])/);
-        if(index<0 || tone==='5') return word;
-        return word.slice(0,index+1)+['','\u0304','\u0301','\u030c','\u0300'][tone]+word.slice(index+1);
-      }).normalize('NFC').replace(/[\s'’.,!?，。！？-]/g,'');
+
+  function normalize(value) {
+    return value.toLowerCase().normalize("NFC").replace(/u:|v/g, "ü")
+      .replace(/([a-zü]+)([1-5])/g, (_, word, tone) => {
+        const index = word.includes("a") ? word.indexOf("a") : word.includes("e") ? word.indexOf("e") :
+          word.includes("ou") ? word.indexOf("o") : word.search(/[aeiouü](?!.*[aeiouü])/);
+        if (index < 0 || tone === "5") return word;
+        return word.slice(0, index + 1) + ["", "\u0304", "\u0301", "\u030c", "\u0300"][tone] + word.slice(index + 1);
+      }).normalize("NFC").replace(/[\s'’.,!?，。！？-]/g, "");
   }
-  function menu() {
-    phase='menu';
-    const passed=cards.filter(c=>record[key(c)]).length;
-    screen('Kiểm tra đã thuộc',deck.name+' · '+passed+'/'+cards.length+' thẻ đạt');
-    node('p','Chọn đúng nghĩa dưới 5 giây. Viết đủ từng chữ, tối đa 4 nét sai trong cả thẻ, không gợi ý. Gõ đúng pinyin dưới 5 giây (nǐ hoặc ni3), nhấn Enter để nộp.');
-    pending=cards.filter(c=>!record[key(c)]);
-    if(pending.length) button('Kiểm tra thẻ chưa đạt',next);
-    if(passed) button('Kiểm tra lại cả bộ',()=>{pending=cards.slice();next();});
-    button('Đóng',()=>dialog.close());
-  }
-  function next() {
-    current=pending.shift();
-    if(!current) return menu();
-    phase='ready';
-    screen('Sẵn sàng?', 'Còn '+(pending.length+1)+' thẻ trong lượt này.');
-    button('Bắt đầu · 5 giây',meaning);
-    button('Về tổng kết',menu);
-  }
-  function clock() {
-    deadline=performance.now()+5000;
-    timer=setTimeout(()=>finish(false,'Hết 5 giây.'),5000);
-  }
-  function meaning() {
-    phase='meaning';
-    screen(current.hanzi,'Chọn nghĩa đúng · dưới 5 giây');
-    const others=[...new Set(QuizData.allCards().filter(c=>c.hanzi!==current.hanzi).map(c=>c.meaning))].filter(m=>m && m!==current.meaning);
-    for(const m of shuffled([current.meaning,...shuffled(others).slice(0,3)])) button(m,()=>{
-      if(performance.now()>=deadline || m!==current.meaning) return finish(false,'Chưa đạt phần chọn nghĩa.');
-      write([...current.hanzi].filter(ch=>/\p{Script=Han}/u.test(ch)),0,0);
-    });
-    clock();
-  }
-  function write(chars,index,errors) {
-    phase='write';
-    screen('Viết từ trí nhớ',current.meaning+' · chữ '+(index+1)+'/'+chars.length);
-    const count=node('p','Nét sai: '+errors+'/4');
-    const target=node('div','');
-    const token=generation;
-    const unavailable=()=>{
-      if(token!==generation) return;
-      phase='error';screen('Chưa tải được dữ liệu nét','Kiểm tra kết nối rồi thử lại.');
-      button('Thử lại',()=>write(chars,index,errors));button('Về tổng kết',menu);
+
+  function loadDeck() {
+    deck = {
+      name: deckSelect.selectedOptions[0]?.textContent || "Bộ thẻ",
+      storage: "mastery_exam_v1:" + deckSelect.value,
     };
-    if(!window.HanziWriter) return unavailable();
-    writer=HanziWriter.create(target,chars[index],{width:220,height:220,showOutline:false,showCharacter:false,onLoadCharDataError:unavailable});
-    writer.quiz({showHintAfterMisses:Infinity,highlightOnComplete:false,onMistake:()=>{
-      if(token!==generation) return;
-      count.textContent='Nét sai: '+(++errors)+'/4';
-      if(errors>=5) finish(false,'Đã sai 5 nét.');
-    },onComplete:()=>{
-      if(token!==generation) return;
-      if(index+1<chars.length) return write(chars,index+1,errors);
-      phase='ready';screen('Chuẩn bị gõ pinyin','Bấm bắt đầu khi bạn sẵn sàng.');
-      button('Bắt đầu · 5 giây',pinyin);
-    }});
+    cards = [...new Map(QuizData.currentDeckCards()
+      .filter((card) => card.meaning && card.pinyin && /\p{Script=Han}/u.test(card.hanzi))
+      .map((card) => [key(card), card])).values()];
+    try { record = JSON.parse(localStorage.getItem(deck.storage)) || {}; }
+    catch { record = {}; }
   }
+
+  function deckPicker(parent) {
+    const toolbar = element("div", undefined, "mastery-toolbar", parent);
+    const label = element("label", "Bộ cần kiểm tra", "mastery-label", toolbar);
+    const select = element("select", undefined, "mastery-select", toolbar);
+    label.htmlFor = "masteryDeckSelect";
+    select.id = "masteryDeckSelect";
+    select.replaceChildren(...[...deckSelect.options].map((option) => option.cloneNode(true)));
+    select.value = deckSelect.value;
+    select.addEventListener("change", () => {
+      deckSelect.value = select.value;
+      deckSelect.dispatchEvent(new Event("change", { bubbles: true }));
+      menu();
+    });
+  }
+
+  function menu() {
+    phase = "menu";
+    loadDeck();
+    const passed = cards.filter((card) => record[key(card)]).length;
+    const stage = screen("KIỂM TRA THEO BỘ", "Bạn đã thật sự thuộc chữ chưa?", "Một thẻ cần vượt qua cả ba phần trong cùng một lượt.");
+    deckPicker(stage);
+
+    const progress = element("section", undefined, "mastery-progress-card", stage);
+    const score = element("div", undefined, "mastery-score", progress);
+    element("strong", String(passed), "mastery-score-number", score);
+    element("span", "/ " + cards.length + " thẻ đã thuộc", "mastery-score-label", score);
+    const track = element("div", undefined, "mastery-progress-track", progress);
+    const fill = element("div", undefined, "mastery-progress-fill", track);
+    fill.style.width = cards.length ? (passed / cards.length * 100) + "%" : "0%";
+
+    const criteria = element("div", undefined, "mastery-criteria", stage);
+    [["1", "Chọn nghĩa", "Đúng trong dưới 5 giây"], ["2", "Viết từ trí nhớ", "Không gợi ý, sai tối đa 4 nét"], ["3", "Gõ pinyin", "Đúng trong dưới 5 giây"]]
+      .forEach(([number, title, detail]) => {
+        const item = element("article", undefined, "mastery-criterion", criteria);
+        element("span", number, "mastery-criterion-number", item);
+        const copy = element("div", undefined, undefined, item);
+        element("strong", title, undefined, copy);
+        element("p", detail, undefined, copy);
+      });
+
+    pending = cards.filter((card) => !record[key(card)]);
+    const actions = element("div", undefined, "mastery-actions", stage);
+    if (pending.length) action(actions, "Bắt đầu " + pending.length + " thẻ chưa đạt", next, true);
+    if (passed) action(actions, "Kiểm tra lại cả bộ", () => { pending = cards.slice(); next(); });
+    if (!cards.length) element("p", "Bộ này chưa có thẻ phù hợp để kiểm tra.", "mastery-empty", actions);
+  }
+
+  function next() {
+    current = pending.shift();
+    if (!current) return menu();
+    phase = "ready";
+    const stage = screen("CÒN " + (pending.length + 1) + " THẺ", "Sẵn sàng?", "Khi bấm bắt đầu, bạn có 5 giây để chọn nghĩa đúng.");
+    element("div", current.hanzi, "mastery-hanzi mastery-hanzi-preview", stage);
+    const actions = element("div", undefined, "mastery-actions", stage);
+    action(actions, "Bắt đầu", meaning, true);
+    action(actions, "Về tổng kết", menu);
+  }
+
+  function startClock(stage) {
+    const clock = element("div", "5.0", "mastery-clock", stage);
+    deadline = performance.now() + 5000;
+    ticker = setInterval(() => {
+      clock.textContent = (Math.max(0, deadline - performance.now()) / 1000).toFixed(1);
+    }, 50);
+    timer = setTimeout(() => finish(false, "Hết 5 giây."), 5000);
+  }
+
+  function meaning() {
+    phase = "meaning";
+    const stage = screen("BƯỚC 1 / 3 · CHỌN NGHĨA", current.hanzi, "Chọn nghĩa đúng trong dưới 5 giây.");
+    content.querySelector(".mastery-title").classList.add("mastery-question-hanzi");
+    startClock(stage);
+    const options = element("div", undefined, "mastery-options", stage);
+    const others = [...new Set(QuizData.allCards().filter((card) => card.hanzi !== current.hanzi).map((card) => card.meaning))]
+      .filter((meaningText) => meaningText && meaningText !== current.meaning);
+    shuffled([current.meaning, ...shuffled(others).slice(0, 3)]).forEach((meaningText) => {
+      const option = element("button", meaningText, "mastery-option", options);
+      option.type = "button";
+      option.addEventListener("click", () => {
+        if (performance.now() >= deadline || meaningText !== current.meaning) return finish(false, "Chưa đạt phần chọn nghĩa.");
+        write([...current.hanzi].filter((char) => /\p{Script=Han}/u.test(char)), 0, 0);
+      });
+    });
+  }
+
+  function write(chars, index, errors) {
+    phase = "write";
+    const stage = screen("BƯỚC 2 / 3 · VIẾT TỪ TRÍ NHỚ", current.meaning, "Viết chữ " + (index + 1) + "/" + chars.length + ". Không có nét mờ hoặc gợi ý.");
+    const count = element("p", "Nét sai: " + errors + "/4", "mastery-mistakes", stage);
+    const target = element("div", undefined, "mastery-write-target", stage);
+    const token = generation;
+    const unavailable = () => {
+      if (token !== generation) return;
+      const errorStage = screen("KHÔNG TẢI ĐƯỢC DỮ LIỆU NÉT", "Thử lại phần viết", "Kiểm tra kết nối rồi thử lại.");
+      const actions = element("div", undefined, "mastery-actions", errorStage);
+      action(actions, "Thử lại", () => write(chars, index, errors), true);
+      action(actions, "Về tổng kết", menu);
+    };
+    if (!window.HanziWriter) return unavailable();
+    const size = Math.min(360, window.innerWidth - 64);
+    writer = HanziWriter.create(target, chars[index], {
+      width: size, height: size, padding: 18, showOutline: false, showCharacter: false,
+      strokeColor: "#221a12", drawingColor: "#8b5cf6", drawingWidth: 24,
+      onLoadCharDataError: unavailable,
+    });
+    writer.quiz({
+      showHintAfterMisses: Infinity,
+      highlightOnComplete: false,
+      onMistake: () => {
+        if (token !== generation) return;
+        errors += 1;
+        count.textContent = "Nét sai: " + errors + "/4";
+        if (errors >= 5) finish(false, "Đã sai 5 nét.");
+      },
+      onComplete: () => {
+        if (token !== generation) return;
+        if (index + 1 < chars.length) return write(chars, index + 1, errors);
+        phase = "ready";
+        const ready = screen("BƯỚC 3 / 3 · PINYIN", "Chuẩn bị gõ pinyin", "Thời gian bắt đầu sau khi bạn bấm nút.");
+        const actions = element("div", undefined, "mastery-actions", ready);
+        action(actions, "Bắt đầu · 5 giây", pinyin, true);
+      },
+    });
+  }
+
   function pinyin() {
-    phase='pinyin';screen(current.hanzi,'Gõ pinyin có thanh rồi nộp.');
-    const input=node('input','');input.setAttribute('aria-label','Pinyin');input.autocomplete='off';input.spellcheck=false;
-    function submit() {
-      const ok=performance.now()<deadline && normalize(input.value)===normalize(current.pinyin);
-      finish(ok,ok?'Đạt cả ba tiêu chí.':'Chưa đạt phần pinyin.');
-    }
-    input.onkeydown=e=>{if(e.key==='Enter'&&!e.isComposing){e.preventDefault();submit();}};
-    button('Nộp',submit);input.focus();clock();
+    phase = "pinyin";
+    const stage = screen("BƯỚC 3 / 3 · GÕ PINYIN", current.hanzi, "Nhập pinyin có dấu hoặc số thanh rồi nhấn Enter.");
+    content.querySelector(".mastery-title").classList.add("mastery-question-hanzi");
+    startClock(stage);
+    const form = element("form", undefined, "mastery-pinyin-form", stage);
+    const input = element("input", undefined, "mastery-pinyin-input", form);
+    input.setAttribute("aria-label", "Pinyin");
+    input.placeholder = "Ví dụ: nǐ hǎo hoặc ni3 hao3";
+    input.autocomplete = "off";
+    input.spellcheck = false;
+    const submit = element("button", "Nộp đáp án", "mastery-action mastery-action-primary", form);
+    submit.type = "submit";
+    form.addEventListener("submit", (event) => {
+      event.preventDefault();
+      const ok = performance.now() < deadline && normalize(input.value) === normalize(current.pinyin);
+      finish(ok, ok ? "Đạt cả ba tiêu chí." : "Chưa đạt phần pinyin.");
+    });
+    input.focus();
   }
-  function finish(ok,msg) {
-    phase='result';screen(ok?'Đã thuộc':'Cần ôn lại',msg);
-    node('p',current.hanzi+' · '+current.pinyin+' · '+current.meaning);
-    record[key(current)]=ok;
-    try {localStorage.setItem(deck.storage,JSON.stringify(record));} catch {node('p','Không lưu được kết quả trên thiết bị.');}
-    button('Tiếp tục',next);button('Về tổng kết',menu);
+
+  function finish(ok, message) {
+    phase = "result";
+    const stage = screen(ok ? "KẾT QUẢ · ĐÃ THUỘC" : "KẾT QUẢ · CẦN ÔN LẠI", ok ? "Tốt lắm!" : "Thử lại sau nhé", message);
+    const result = element("div", undefined, "mastery-result " + (ok ? "mastery-result-pass" : "mastery-result-fail"), stage);
+    element("div", current.hanzi, "mastery-result-hanzi", result);
+    element("strong", current.pinyin, "mastery-result-pinyin", result);
+    element("p", current.meaning, "mastery-result-meaning", result);
+    record[key(current)] = ok;
+    try { localStorage.setItem(deck.storage, JSON.stringify(record)); }
+    catch { element("p", "Không lưu được kết quả trên thiết bị.", "mastery-save-error", stage); }
+    const actions = element("div", undefined, "mastery-actions", stage);
+    action(actions, pending.length ? "Thẻ tiếp theo" : "Xem tổng kết", next, true);
+    action(actions, "Dừng và xem tổng kết", menu);
   }
-  dialog.onclose=()=>{clearTimeout(timer);generation++;writer?.cancelQuiz();writer=null;};
-  dialog.addEventListener('keydown',e=>e.stopPropagation());
-  document.addEventListener('visibilitychange',()=>{if(document.hidden && dialog.open && ['meaning','pinyin'].includes(phase)) finish(false,'Lượt tính giờ bị gián đoạn.');});
-  document.getElementById('masteryBtn').onclick=()=>{
-    const select=document.getElementById('deckSelect');
-    deck={name:select.selectedOptions[0].textContent,storage:'mastery_exam_v1:'+select.value};
-    cards=[...new Map(QuizData.currentDeckCards().filter(c=>c.meaning && c.pinyin && /\p{Script=Han}/u.test(c.hanzi)).map(c=>[key(c),c])).values()];
-    try {record=JSON.parse(localStorage.getItem(deck.storage))||{};} catch {record={};}
-    menu();dialog.showModal();
-  };
+
+  function open() { loadDeck(); menu(); }
+  content.addEventListener("keydown", (event) => event.stopPropagation());
+  document.querySelectorAll(".nav-tab").forEach((tab) => tab.addEventListener("click", () => {
+    if (tab.dataset.view !== "mastery") stopActiveTask();
+  }));
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden && !content.closest("[hidden]") && ["meaning", "pinyin"].includes(phase)) finish(false, "Lượt tính giờ bị gián đoạn.");
+  });
+  window.Mastery = { open };
 })();

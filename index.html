@@ -21,6 +21,7 @@
   <nav class="main-nav" id="mainNav" aria-label="Điều hướng chính">
     <button class="nav-tab active" data-view="today">🏠 Hôm nay</button>
     <button class="nav-tab" data-view="decks">🃏 Bộ thẻ</button>
+    <button class="nav-tab" data-view="mastery">✅ Kiểm tra</button>
     <button class="nav-tab" data-view="phrases">💬 Giao tiếp</button>
     <button class="nav-tab" data-view="progress">📊 Tiến độ</button>
     <button class="nav-tab" data-view="settings">⚙️ Cài đặt</button>
@@ -35,6 +36,10 @@
   <section class="view" id="viewLesson" aria-label="Bài học" hidden>
     <div id="lessonContent"></div>
     <p class="lesson-kbd-hint" id="lessonKbdHint" hidden></p>
+  </section>
+
+  <section class="view" id="viewMastery" aria-label="Kiểm tra đã thuộc" hidden>
+    <div id="masteryContent"></div>
   </section>
 
   <!-- 💬 50 câu giao tiếp -->
@@ -100,7 +105,6 @@
         <button id="modeBrowseBtn" class="mode-btn">👀 Lướt</button>
       </div>
       <button id="quizBtn" class="quiz-btn" title="Làm bài tập kiểm tra bộ hiện tại">🎯 Luyện tập</button>
-      <button id="masteryBtn" type="button">Kiểm tra đã thuộc</button>
       <div class="settings-wrap">
         <button id="settingsBtn" class="settings-btn" title="Cài đặt & tuỳ chọn">⚙️</button>
         <div class="settings-menu" id="settingsMenu">

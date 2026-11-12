@@ -79,13 +79,14 @@
   }
 
   // ---------- Điều hướng view ----------
-  const VIEW_IDS = { today: "viewToday", lesson: "viewLesson", decks: "viewDecks", progress: "viewProgress", settings: "viewSettings", phrases: "viewPhrases" };
+  const VIEW_IDS = { today: "viewToday", lesson: "viewLesson", decks: "viewDecks", mastery: "viewMastery", progress: "viewProgress", settings: "viewSettings", phrases: "viewPhrases" };
   function setView(name) {
     currentView = name;
     Object.entries(VIEW_IDS).forEach(([k, id]) => { const el = $(id); if (el) el.hidden = (k !== name); });
     document.querySelectorAll(".nav-tab").forEach((b) => b.classList.toggle("active", b.dataset.view === (name === "lesson" ? "today" : name)));
     if (name === "today") renderToday();
     if (name === "lesson") { renderLesson(); focusTask(); }
+    if (name === "mastery" && window.Mastery) window.Mastery.open();
     if (name === "phrases" && window.Phrases) window.Phrases.render();
     window.scrollTo(0, 0);
   }
