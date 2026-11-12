@@ -14,6 +14,9 @@
     { speaker: "B", text: "我叫林。很高兴认识你。", pinyin: "Wǒ jiào Lín. Hěn gāoxìng rènshi nǐ.", meaning: "Mình tên Lâm. Rất vui được làm quen với bạn." },
     { speaker: "A", text: "我也很高兴认识你。", pinyin: "Wǒ yě hěn gāoxìng rènshi nǐ.", meaning: "Mình cũng rất vui được làm quen với bạn. 也 nghĩa là cũng." },
   ];
+  [...original, ...transfer].forEach((line, index) => {
+    line.audio = "assets/conversations/greeting-" + index + ".mp3";
+  });
   const questions = {
     baseline: [{ prompt: "Hai người đang nói về việc gì?", options: ["Làm quen và giới thiệu tên", "Hỏi đường", "Gọi đồ uống", "Mình chưa hiểu"], answer: 0 }],
     practice: [
@@ -109,7 +112,17 @@
         onlineAudio.onerror = failed;
         onlineAudio.play().catch(failed);
       };
-      if (!synth || !voice) { online(); return; }
+      const recorded = new Audio(line.audio);
+      onlineAudio = recorded;
+      recorded.playbackRate = slow ? 0.75 : 1;
+      recorded.onended = next;
+      recorded.onerror = () => {
+        if (token !== audioToken) return;
+        if (synth && voice) deviceVoice();
+        else online();
+      };
+      recorded.play().catch(() => { if (token === audioToken) online(); });
+      function deviceVoice() {
       const utterance = new SpeechSynthesisUtterance(line.text);
       utterance.lang = "zh-CN";
       if (voice) utterance.voice = voice;
@@ -120,6 +133,7 @@
         online();
       };
       synth.speak(utterance);
+      }
     };
     next();
   }
