@@ -155,6 +155,9 @@ body {
 }
 
 .deck-picker {
+  /* Blur creates a stacking context: raise the whole toolbar, not only its menu. */
+  position: relative;
+  z-index: 20;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -284,6 +287,9 @@ body {
   top: calc(100% + 8px);
   right: 0;
   min-width: 220px;
+  max-width: calc(100vw - 48px);
+  max-height: 60vh;
+  overflow-y: auto;
   background: #15151d;
   border: 1px solid var(--border-strong);
   border-radius: var(--r-lg);
@@ -702,6 +708,10 @@ body {
 
 /* ============ Card ============ */
 .card-area {
+  /* Keep the flipped card's 3D layers below toolbar popovers. */
+  position: relative;
+  z-index: 0;
+  isolation: isolate;
   display: grid;
   grid-template-columns: 52px 1fr 52px;
   gap: 12px;
