@@ -106,6 +106,7 @@
     const c = $("todayContent");
     if (!c) return;
     const due = window.App ? window.App.dueCount() : 0;
+    const hsk = window.App.hskProgress();
     const started = !!ls.started;
     const done = !!ls.completed;
     const inProgress = started && !done;
@@ -126,6 +127,15 @@
       <section class="home-intro"><p class="home-eyebrow">HỌC MỘT ÍT, DÙNG LẠI MỖI NGÀY</p>
         <h2>Hôm nay, mình học gì?</h2>
         <p>Nhớ mặt chữ, viết thành câu và kiểm tra điều mình đã học.</p>
+      </section>
+      <section class="hsk-overview" aria-label="Tiến độ HSK1">
+        <h3>HSK1 2.0 · Trọn bộ ${hsk.total} từ</h3>
+        <p>10 bài × 15 từ · Học lần lượt từ Bài 01 trong danh sách bộ thẻ.</p>
+        <progress value="${hsk.passed}" max="${hsk.total}" aria-label="Từ đã đạt đủ ba tiêu chí kiểm tra"></progress>
+        <p><strong>${hsk.reviewed}/${hsk.total}</strong> từ đã ôn · <strong>${hsk.passed}/${hsk.total}</strong> từ đã đạt kiểm tra.</p>
+        <p class="muted">Mỗi từ chỉ tính một lần, kể cả học ở nhiều bộ. “Đã ôn” là đã đánh giá thẻ; “đã đạt” là qua đủ ba phần kiểm tra.</p>
+        <button class="btn btn-secondary" data-act="open-decks">Chọn bài HSK1 →</button>
+        <small>Phiên bản 150 từ, không phải HSK 3.0. <a href="https://www.chinesetest.cn/HSK/1?type=2" target="_blank" rel="noopener">Phạm vi từ vựng</a></small>
       </section>
       <div class="home-choices">
         <article class="home-primary"><div class="home-symbol" lang="zh-CN">字</div><div>

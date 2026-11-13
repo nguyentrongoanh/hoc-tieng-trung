@@ -27,7 +27,7 @@
     CUSTOM_DECK_ID,
     ...Object.keys(state.importedDecks),
   ];
-  if (!allDeckIds().includes(state.deckId)) state.deckId = Object.keys(DECKS)[0];
+  if (!allDeckIds().includes(state.deckId)) state.deckId = window.HSK1.lessons[0].id;
 
   // Queue cho study mode (được tính lại khi đổi deck/mode)
   let queue = [];
@@ -163,7 +163,9 @@
 
     const builtin = document.createElement("optgroup");
     builtin.label = "Bộ mẫu";
-    Object.entries(DECKS).forEach(([id, d], idx) => {
+    const orderedDecks = Object.entries(DECKS).sort(([a], [b]) => Number(b.startsWith("hsk1_v2_")) - Number(a.startsWith("hsk1_v2_")));
+    builtin.label = "HSK1 2.0 đầy đủ & các bộ bổ trợ";
+    orderedDecks.forEach(([id, d], idx) => {
       const opt = document.createElement("option");
       opt.value = id;
       opt.textContent = idx === 0 ? `🎯 ${d.name} (${d.cards.length})` : `${d.name} (${d.cards.length})`;
@@ -1512,6 +1514,9 @@
 
   // ---------- Public API cho lesson.js (bài học Hôm nay) ----------
   window.App = {
+    hskProgress() {
+      return window.HSK1.progress(state, key => JSON.parse(localStorage.getItem(key)));
+    },
     speak(text) { speak(text); },
     stopSpeak() { stopSpeak(); },
     // Tổng số thẻ đến hạn trên MỌI bộ (kể cả bộ tự tạo/import).
