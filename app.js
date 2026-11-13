@@ -205,6 +205,8 @@
 
   // ---------- Render ----------
   function render() {
+    closeCardLookup(false);
+    stopExampleAudio();
     ensureDeckBuckets();
     deleteDeckBtn.style.display = isUserDeck(state.deckId) ? "" : "none";
     updateModeButtons();
@@ -249,6 +251,9 @@
   let currentExampleText = "";
   let autoplayTimer = null;
   function showCard(c, status) {
+    const total = state.mode === "study" ? queue.length : getDeckCards(state.deckId).length;
+    const position = state.mode === "study" ? queueIndex + 1 : state.index + 1;
+    $("studyLocation").textContent = `${deckSelect.selectedOptions[0]?.textContent || state.deckId} · ${state.mode === "study" ? "Học" : "Lướt"} · Thẻ ${status === "done" || !total ? 0 : position}/${total}`;
     hanziEl.textContent = c.hanzi;
     // Câu dài (bộ hội thoại) → thu nhỏ font để không tràn thẻ.
     const hzLen = Array.from(c.hanzi || "").length;
@@ -258,6 +263,11 @@
     meaningEl.textContent = c.meaning || "(chưa có nghĩa — sửa ở bảng dưới)";
     currentExampleText = c.example || "";
     renderExample(exampleEl, currentExampleText);
+    const details = window.EXAMPLE_DETAILS?.[currentExampleText];
+    $("examplePinyin").textContent = c.examplePinyin || details?.pinyin || (/[一-鿿]/.test(currentExampleText) && window.pinyinPro ? window.pinyinPro.pinyin(currentExampleText) : "");
+    $("exampleMeaning").textContent = c.exampleMeaning || details?.meaning || (/[一-鿿]/.test(currentExampleText) ? "Câu tự thêm chưa có bản dịch. Bạn có thể bổ sung nghĩa trong dữ liệu thẻ." : "");
+    $("exampleAudioStatus").textContent = "";
+    speakExampleBtn.disabled = !/[一-鿿]/.test(currentExampleText);
     const tag = tagLabel(status);
     cardTagFront.textContent = tag;
     cardTagBack.textContent = tag;
@@ -381,6 +391,7 @@
 
   function speak(text) {
     if (!text) return;
+    stopSpeak();
     if (state.useGoogleTts) {
       speakGoogle(text);
       return;
@@ -393,6 +404,7 @@
 
   // Dừng mọi âm đang phát (tránh đọc chồng khi rời bước / nghe lại).
   function stopSpeak() {
+    stopExampleAudio();
     if (synth) { try { synth.cancel(); } catch {} }
     if (googleAudio) { try { googleAudio.pause(); googleAudio.currentTime = 0; } catch {} }
   }
@@ -650,7 +662,7 @@
     table.className = "edit-table";
     table.innerHTML = `
       <thead><tr>
-        <th>#</th><th>Hán</th><th>Pinyin</th><th>Nghĩa tiếng Việt</th><th>Ví dụ</th><th></th>
+        <th>#</th><th>Hán</th><th>Pinyin</th><th>Nghĩa tiếng Việt</th><th>Ví dụ</th><th>Pinyin câu</th><th>Nghĩa câu</th><th></th>
       </tr></thead><tbody></tbody>`;
     const tbody = table.querySelector("tbody");
     cards.forEach((c, i) => {
@@ -661,6 +673,8 @@
         <td><input data-f="pinyin" value="${escapeHtml(c.pinyin || "")}" /></td>
         <td><input data-f="meaning" value="${escapeHtml(c.meaning || "")}" placeholder="điền nghĩa..." /></td>
         <td><input data-f="example" value="${escapeHtml(c.example || "")}" /></td>
+        <td><input data-f="examplePinyin" aria-label="Pinyin câu ví dụ" value="${escapeHtml(c.examplePinyin || "")}" /></td>
+        <td><input data-f="exampleMeaning" aria-label="Nghĩa câu ví dụ" value="${escapeHtml(c.exampleMeaning || "")}" /></td>
         <td><button class="del-row" title="Xoá dòng">✕</button></td>`;
       tr.querySelectorAll("input").forEach((inp) => {
         inp.addEventListener("input", (e) => {
@@ -743,16 +757,101 @@
     return partial ? partial[0] : null;
   }
 
+  let lookupOrigin = null;
+  function closeCardLookup(restore = true) {
+    const panel = $("cardLookup");
+    if (!panel) return;
+    panel.hidden = true;
+    panel.replaceChildren();
+    if (restore && lookupOrigin) {
+      window.scrollTo(0, lookupOrigin.scroll);
+      lookupOrigin.focus?.focus({ preventScroll: true });
+    }
+    lookupOrigin = null;
+  }
   function jumpToCard(deckId, cardIndex) {
-    state.deckId = deckId;
-    state.index = cardIndex;
-    // Về browse mode để index ánh xạ đúng (không bị queue trong study mode)
-    state.mode = "browse";
-    if (!state.progress[deckId]) state.progress[deckId] = { order: null };
-    state.progress[deckId].order = null; // bỏ shuffle để index khớp
-    saveState();
-    populateDeckSelect();
-    render();
+    const found = getDeckCards(deckId)[cardIndex];
+    if (!found) return;
+    if (!lookupOrigin) lookupOrigin = { scroll: window.scrollY, focus: document.activeElement };
+    const panel = $("cardLookup");
+    panel.replaceChildren(); panel.hidden = false;
+    const back = document.createElement("button");
+    back.textContent = "← Quay lại thẻ đang học";
+    back.type = "button";
+    back.addEventListener("click", () => closeCardLookup());
+    panel.append(back);
+    const origin = document.createElement("p");
+    origin.textContent = "Bạn vẫn đang ở " + $("studyLocation").textContent;
+    panel.append(origin);
+    for (const [text, className] of [[found.hanzi, "lookup-hanzi"], [found.pinyin, "lookup-pinyin"], [found.meaning, "lookup-meaning"]]) {
+      const line = document.createElement("p"); line.textContent = text || ""; line.className = className; panel.append(line);
+    }
+    const source = document.createElement("p");
+    source.textContent = "Nguồn tra cứu: " + (DECKS[deckId]?.name || state.importedDecks[deckId]?.name || "Của tôi");
+    panel.append(source);
+    const listen = document.createElement("button"); listen.type = "button"; listen.textContent = "Nghe từ này";
+    listen.addEventListener("click", () => speak(found.hanzi)); panel.append(listen);
+    panel.scrollIntoView({ block: "start", behavior: "smooth" }); back.focus({ preventScroll: true });
+  }
+
+  let examplePlayer = null;
+  let examplePlayback = 0;
+  let exampleSegmentTimer = null;
+  function stopExampleAudio() {
+    clearInterval(exampleSegmentTimer);
+    examplePlayback += 1;
+    if (examplePlayer) { examplePlayer.pause(); examplePlayer = null; }
+    if (speakExampleBtn) speakExampleBtn.disabled = false;
+  }
+  function speakExample(text) {
+    stopExampleAudio(); stopSpeak();
+    const token = examplePlayback;
+    const status = $("exampleAudioStatus");
+    status.textContent = "Đang tải âm thanh…";
+    speakExampleBtn.disabled = true;
+    const speech = text.replace(/\b[AB]\s*[:：]/g, "").trim();
+    const sources = [
+      "https://translate.google.com/translate_tts?ie=UTF-8&tl=zh-CN&client=tw-ob&q=" + encodeURIComponent(speech),
+      "https://dict.youdao.com/dictvoice?le=zh&audio=" + encodeURIComponent(speech),
+    ];
+    const clip = window.EXAMPLE_AUDIO?.[text];
+    if (clip) sources.unshift(clip.src);
+    function finish(message) {
+      if (token !== examplePlayback) return;
+      clearInterval(exampleSegmentTimer);
+      examplePlayer?.pause();
+      status.textContent = message; speakExampleBtn.disabled = false;
+    }
+    function attempt(index) {
+      if (token !== examplePlayback) return;
+      if (index === sources.length) {
+        status.textContent = "Đang thử giọng đọc trên thiết bị…";
+        speakWeb(speech, error => finish(error ? "Chưa phát được câu. Hãy kiểm tra kết nối hoặc giọng tiếng Trung trên thiết bị rồi thử lại." : "Đã đọc xong câu."));
+        return;
+      }
+      const audio = new Audio(sources[index]); examplePlayer = audio;
+      let moved = false;
+      const fallback = () => { if (moved || token !== examplePlayback) return; moved = true; clearInterval(exampleSegmentTimer); audio.pause(); attempt(index + 1); };
+      audio.onerror = fallback;
+      if (clip && index === 0) {
+        audio.addEventListener("loadedmetadata", () => {
+          if (token === examplePlayback) audio.currentTime = clip.start;
+        }, { once: true });
+      }
+      audio.onplaying = () => {
+        if (token !== examplePlayback) return;
+        status.textContent = "Đang đọc câu ví dụ…";
+        if (clip && index === 0) {
+          clearInterval(exampleSegmentTimer);
+          exampleSegmentTimer = setInterval(() => {
+            if (token === examplePlayback && audio.currentTime >= clip.end - 0.02) finish("Đã đọc xong câu.");
+          }, 30);
+        }
+      };
+      audio.onended = () => finish("Đã đọc xong câu.");
+      audio.play().catch(fallback);
+    }
+    attempt(0);
   }
 
   // Render example sentence với chars clickable
@@ -765,6 +864,11 @@
         const match = findExactCard(ch);
         if (match) {
           span.className = "sent-clickable";
+          span.tabIndex = 0;
+          span.setAttribute("role", "button");
+          span.addEventListener("keydown", (e) => {
+            if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); jumpToCard(match.deckId, match.index); }
+          });
           span.title = `${match.card.hanzi} · ${match.card.pinyin} — ${match.card.meaning}\n(nguồn: ${match.source})`;
           span.addEventListener("click", (e) => {
             e.stopPropagation();
@@ -1034,7 +1138,7 @@
   if (speakExampleBtn) {
     speakExampleBtn.addEventListener("click", (e) => {
       e.stopPropagation();
-      if (currentExampleText) speak(currentExampleText);
+      if (currentExampleText) speakExample(currentExampleText);
     });
   }
 
@@ -1143,6 +1247,10 @@
   });
 
   document.addEventListener("keydown", (e) => {
+    if (!$("cardLookup").hidden) {
+      if (e.key === "Escape") { e.preventDefault(); closeCardLookup(); }
+      return;
+    }
     const tag = document.activeElement.tagName;
     if (["INPUT", "TEXTAREA", "SELECT"].includes(tag)) return;
     // Bỏ qua phím tắt khi đang mở modal (quiz / viết / onboarding)
@@ -1182,7 +1290,7 @@
     const meaning = $("newMeaning").value.trim();
     const example = $("newExample").value.trim();
     if (!hanzi || !pinyin || !meaning) return;
-    state.customCards.push({ hanzi, pinyin, meaning, example });
+    state.customCards.push({ hanzi, pinyin, meaning, example, exampleMeaning: $("newExampleMeaning").value.trim() });
     invalidateCardIndex();
     saveState();
     populateDeckSelect();

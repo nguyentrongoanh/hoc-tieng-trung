@@ -2014,6 +2014,18 @@ select { appearance: none; -webkit-appearance: none; background-image: url("data
   outline-offset: 2px;
 }
 
+.study-location { margin: 14px 0; color: var(--text-muted); font-size: 16px; }
+.card-lookup[hidden] { display: none; }
+.card-lookup { padding: 24px; margin-bottom: 20px; border: 1px solid #a78bfa; border-radius: 18px; background: var(--bg-elev-2); scroll-margin-top: 20px; }
+.card-lookup button { min-height: 44px; padding: 10px 16px; border: 1px solid #a78bfa; border-radius: 10px; background: var(--bg-elev-2); color: var(--text); cursor: pointer; }
+.lookup-hanzi { font: 48px/1.5 "Noto Serif SC", serif; margin: 12px 0; }
+.lookup-pinyin { color: #c4b5fd; font-size: 23px; margin: 6px 0; }
+.lookup-meaning { font-size: 22px; }
+.card-back { overflow-y: auto; justify-content: safe center; padding-top: 50px; }
+.example-pinyin, .example-meaning { margin: 7px 0 0; font-size: 17px; line-height: 1.6; color: #252744; }
+.example-audio-status { min-height: 20px; margin: 6px 0 0; font-size: 13px; color: #3b3762; }
+.sent-clickable:focus-visible { outline: 2px solid #6d28d9; outline-offset: 3px; }
+
 /* ============ Đặt câu từ trí nhớ ============ */
 .sentence-page { max-width: 860px; margin: auto; padding: 10px 0 48px; }
 .sentence-page h2 { font-size: clamp(28px, 4vw, 40px); margin: 10px 0; }
