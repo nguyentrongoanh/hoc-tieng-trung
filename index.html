@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Serif+SC:wght@500;700&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="styles.css?v=20261113-1" />
+<link rel="stylesheet" href="styles.css?v=20261113-2" />
 </head>
 <body>
 <div class="bg-orb bg-orb-1"></div>
@@ -15,7 +15,7 @@
 <div class="bg-grid"></div>
 <div class="app">
   <header class="topbar">
-    <h1>学中文 · Flashcard Tiếng Trung</h1>
+    <h1><span lang="zh-CN">学中文</span><small>Học tiếng Trung mỗi ngày</small></h1>
   </header>
 
   <nav class="main-nav" id="mainNav" aria-label="Điều hướng chính">
@@ -25,6 +25,7 @@
     <button class="nav-tab" data-view="mastery">✅ Kiểm tra</button>
     <button class="nav-tab" data-view="phrases">💬 Giao tiếp</button>
     <button class="nav-tab" data-view="progress">📊 Tiến độ</button>
+    <button class="nav-tab" data-view="manage">🗂 Quản lý thẻ</button>
     <button class="nav-tab" data-view="settings">⚙️ Cài đặt</button>
   </nav>
 
@@ -105,6 +106,7 @@
 
   <!-- 🃏 Bộ thẻ (chế độ cũ) -->
   <div class="view" id="viewDecks">
+    <div class="study-heading"><h2>Ôn mặt chữ</h2><button id="focusStudyBtn" type="button" aria-pressed="false">⛶ Tập trung</button></div>
     <div class="deck-picker">
       <label for="deckSelect">Bộ thẻ:</label>
       <select id="deckSelect"></select>
@@ -191,6 +193,7 @@
   <div class="srs-hint muted" id="srsHint">Lật thẻ để hiện các nút đánh giá.</div>
 
   <!-- 🔗 Thẻ liên quan -->
+  <details class="study-reference"><summary>Thẻ liên quan</summary>
   <section class="related-box" id="relatedBox">
     <div class="related-header">
       <strong>🔗 Thẻ liên quan</strong>
@@ -198,8 +201,10 @@
     </div>
     <div id="relatedList" class="related-list"></div>
   </section>
+  </details>
 
   <!-- 📖 Bộ thủ -->
+  <details class="study-reference"><summary>Bộ thủ & giải nghĩa</summary>
   <section class="radicals-box" id="radicalsBox">
     <div class="radicals-header">
       <strong>📖 Bộ thủ & giải nghĩa</strong>
@@ -207,9 +212,17 @@
     </div>
     <div id="radicalsList"></div>
   </section>
+  </details>
 
   <!-- (Heatmap, phím tắt và cài đặt giọng đã chuyển sang màn "Tiến độ" / "Cài đặt") -->
   <audio id="googleAudio" preload="none"></audio>
+  </div><!-- /viewDecks -->
+
+  <section class="view" id="viewManage" aria-label="Quản lý thẻ" hidden>
+    <h2 class="view-title">Quản lý thẻ</h2>
+    <p class="muted">Chọn bộ để sửa, hoặc thêm tài liệu và thẻ mới.</p>
+    <label for="manageDeckSelect">Bộ thẻ đang quản lý</label>
+    <select id="manageDeckSelect"></select>
 
   <!-- 📥 Import -->
   <section class="import-box">
@@ -244,7 +257,7 @@
   <footer>
     <small>Dữ liệu SRS, tiến độ, thẻ và lịch sử ôn tập lưu trong trình duyệt (localStorage).</small>
   </footer>
-  </div><!-- /viewDecks -->
+  </section><!-- /viewManage -->
 </div>
 
 <!-- ✏️ Writing test modal -->
@@ -358,11 +371,11 @@
 <script src="decks.js"></script>
 <script src="examples-data.js?v=20261113-1"></script>
 <script src="examples-audio.js?v=20261113-1"></script>
-<script src="app.js?v=20261113-1"></script>
+<script src="app.js?v=20261113-2"></script>
 <script src="import.js"></script>
 <script src="quiz.js"></script>
 <script src="mastery.js?v=20261112-1"></script>
-<script src="lesson.js?v=20261112-5"></script>
+<script src="lesson.js?v=20261113-2"></script>
 <script src="sentences.js?v=20261112-5"></script>
 <script src="conversation.js?v=20261112-4"></script>
 <script src="phrases-data.js"></script>

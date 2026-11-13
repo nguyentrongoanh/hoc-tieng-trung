@@ -193,6 +193,9 @@
     }
 
     deckSelect.value = state.deckId;
+    const manager = $("manageDeckSelect");
+    manager.replaceChildren(...Array.from(deckSelect.children, group => group.cloneNode(true)));
+    manager.value = state.deckId;
   }
 
   function updateModeButtons() {
@@ -205,6 +208,7 @@
 
   // ---------- Render ----------
   function render() {
+    $("manageDeckSelect").value = state.deckId;
     closeCardLookup(false);
     stopExampleAudio();
     ensureDeckBuckets();
@@ -1076,11 +1080,22 @@
   // ---------- Events ----------
   deckSelect.addEventListener("change", () => {
     state.deckId = deckSelect.value;
+    $("manageDeckSelect").value = state.deckId;
     state.index = 0;
     randomizeOrder(state.deckId); // mỗi lần mở bộ → trộn ngẫu nhiên
     rebuildQueue();
     saveState();
     render();
+  });
+
+  $("manageDeckSelect").addEventListener("change", (event) => {
+    deckSelect.value = event.target.value;
+    deckSelect.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+  $("focusStudyBtn").addEventListener("click", () => {
+    const focused = document.body.classList.toggle("study-focus");
+    $("focusStudyBtn").textContent = focused ? "↙ Thoát tập trung" : "⛶ Tập trung";
+    $("focusStudyBtn").setAttribute("aria-pressed", String(focused));
   });
 
   modeStudyBtn.addEventListener("click", () => switchMode("study"));
@@ -1251,6 +1266,7 @@
       if (e.key === "Escape") { e.preventDefault(); closeCardLookup(); }
       return;
     }
+    if ($("viewDecks").hidden) return;
     const tag = document.activeElement.tagName;
     if (["INPUT", "TEXTAREA", "SELECT"].includes(tag)) return;
     // Bỏ qua phím tắt khi đang mở modal (quiz / viết / onboarding)

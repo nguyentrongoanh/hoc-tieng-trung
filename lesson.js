@@ -79,8 +79,13 @@
   }
 
   // ---------- Điều hướng view ----------
-  const VIEW_IDS = { today: "viewToday", lesson: "viewLesson", conversation: "viewConversation", sentences: "viewSentences", decks: "viewDecks", mastery: "viewMastery", progress: "viewProgress", settings: "viewSettings", phrases: "viewPhrases" };
+  const VIEW_IDS = { today: "viewToday", lesson: "viewLesson", conversation: "viewConversation", sentences: "viewSentences", decks: "viewDecks", manage: "viewManage", mastery: "viewMastery", progress: "viewProgress", settings: "viewSettings", phrases: "viewPhrases" };
   function setView(name) {
+    if (name !== "decks") {
+      document.body.classList.remove("study-focus");
+      $("focusStudyBtn").textContent = "⛶ Tập trung";
+      $("focusStudyBtn").setAttribute("aria-pressed", "false");
+    }
     if (name !== "conversation" && window.Conversation) window.Conversation.stop();
     currentView = name;
     Object.entries(VIEW_IDS).forEach(([k, id]) => { const el = $(id); if (el) el.hidden = (k !== name); });
@@ -117,18 +122,22 @@
       ? `<span class="chip chip-ok">✅ Đã hoàn thành</span>`
       : inProgress ? `<span class="chip chip-progress">⏳ Đang học dở · Bước ${Math.min(ls.step, 5)}/5</span>` : "";
 
-    const reviewCard = due > 0
-      ? `<div class="today-card review">
-          <div class="today-card-title">🔁 Ôn ${due} thẻ đến hạn</div>
-          <p class="muted">Bạn có ${due} thẻ cần ôn lại hôm nay để nhớ lâu hơn.</p>
-          <button class="btn btn-secondary" data-act="review-deck">Ôn ngay</button>
-        </div>` : "";
-
     c.innerHTML = `
-      <h2 class="view-title">👋 Hôm nay</h2>
-      <p class="muted today-sub">${due > 0 ? `Hôm nay bạn có ${due} thẻ đến hạn.` : "Bắt đầu với một bài học nhỏ mỗi ngày."}</p>
+      <section class="home-intro"><p class="home-eyebrow">HỌC MỘT ÍT, DÙNG LẠI MỖI NGÀY</p>
+        <h2>Hôm nay, mình học gì?</h2>
+        <p>Nhớ mặt chữ, viết thành câu và kiểm tra điều mình đã học.</p>
+      </section>
+      <div class="home-choices">
+        <article class="home-primary"><div class="home-symbol" lang="zh-CN">字</div><div>
+          <p class="home-eyebrow">ÔN MẶT CHỮ</p><h3>Tiếp tục bộ thẻ của bạn</h3>
+          <p>${due > 0 ? `Có ${due} thẻ đến hạn ôn hôm nay.` : "Mở bộ đang học và ôn từng chữ theo nhịp của bạn."}</p>
+          <button class="btn btn-primary" data-act="open-decks">Vào học →</button>
+        </div></article>
+        <article class="home-choice"><span class="home-choice-icon">✍</span><h3>Đặt câu</h3><p>Đọc câu tiếng Việt, tự nhớ và gõ chữ Hán.</p><button class="btn btn-secondary" data-act="open-sentences">Luyện đặt câu →</button></article>
+        <article class="home-choice"><span class="home-choice-icon">✓</span><h3>Kiểm tra</h3><p>Tự kiểm tra nghĩa, cách viết và pinyin của từng bộ.</p><button class="btn btn-secondary" data-act="open-mastery">Kiểm tra đã thuộc →</button></article>
+      </div>
+      <details class="home-extra"><summary>Bài hướng dẫn và luyện nghe</summary>
       <div id="conversationHome"></div>
-      ${reviewCard}
       <div class="today-card lesson">
         ${badge}
         <div class="today-card-title">✍️ Luyện chữ bổ trợ · ${esc(LESSON.title)}</div>
@@ -136,6 +145,8 @@
         <p class="muted today-meta">⏱ Khoảng ${LESSON.minutes} phút</p>
         ${lessonBtn}
       </div>
+      </details>
+      <div class="home-footer"><span>Tiến độ và công cụ của bạn</span><button class="btn btn-ghost" data-act="open-progress">Xem tiến độ</button><button class="btn btn-ghost" data-act="open-manage">Nhập / sửa thẻ</button></div>
       ${storageBlocked ? `<p class="warn">⚠️ Không ghi được tiến độ (bộ nhớ bị chặn). Tiến độ chỉ được giữ trong lần mở này.</p>` : ""}`;
   }
 
@@ -526,6 +537,7 @@
     const el = e.target.closest("[data-act]");
     if (!el) return;
     const act = el.dataset.act;
+    if (act.startsWith("open-")) { setView(act.slice(5)); return; }
     if (act === "start") startLesson();
     else if (act === "continue") continueLesson();
     else if (act === "relearn") relearn();
