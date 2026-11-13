@@ -289,3 +289,212 @@ const DECKS = {
     ],
   },
 };
+
+// Các nhóm từ cơ bản bổ sung, kèm câu và bản dịch đầy đủ.
+DECKS.hsk1_family = {
+  "name": "HSK1 · Gia đình & con người",
+  "cards": [
+    {
+      "hanzi": "爸爸",
+      "pinyin": "bà ba",
+      "meaning": "bố",
+      "example": "我爸爸是老师。",
+      "examplePinyin": "wǒ bà ba shì lǎo shī",
+      "exampleMeaning": "Bố tôi là giáo viên."
+    },
+    {
+      "hanzi": "妈妈",
+      "pinyin": "mā ma",
+      "meaning": "mẹ",
+      "example": "我妈妈在家。",
+      "examplePinyin": "wǒ mā ma zài jiā",
+      "exampleMeaning": "Mẹ tôi ở nhà."
+    },
+    {
+      "hanzi": "儿子",
+      "pinyin": "ér zi",
+      "meaning": "con trai",
+      "example": "他是我儿子。",
+      "examplePinyin": "tā shì wǒ ér zi",
+      "exampleMeaning": "Cậu ấy là con trai tôi."
+    },
+    {
+      "hanzi": "女儿",
+      "pinyin": "nǚ ér",
+      "meaning": "con gái",
+      "example": "我女儿三岁。",
+      "examplePinyin": "wǒ nǚ ér sān suì",
+      "exampleMeaning": "Con gái tôi ba tuổi."
+    },
+    {
+      "hanzi": "家",
+      "pinyin": "jiā",
+      "meaning": "nhà; gia đình",
+      "example": "我家有三个人。",
+      "examplePinyin": "wǒ jiā yǒu sān ge rén",
+      "exampleMeaning": "Nhà tôi có ba người."
+    },
+    {
+      "hanzi": "人",
+      "pinyin": "rén",
+      "meaning": "người",
+      "example": "他是中国人。",
+      "examplePinyin": "tā shì zhōng guó rén",
+      "exampleMeaning": "Anh ấy là người Trung Quốc."
+    },
+    {
+      "hanzi": "先生",
+      "pinyin": "xiān sheng",
+      "meaning": "ông; ngài",
+      "example": "王先生在这儿。",
+      "examplePinyin": "wáng xiān sheng zài zhèr",
+      "exampleMeaning": "Ông Vương ở đây."
+    },
+    {
+      "hanzi": "同学",
+      "pinyin": "tóng xué",
+      "meaning": "bạn học",
+      "example": "她是我的同学。",
+      "examplePinyin": "tā shì wǒ de tóng xué",
+      "exampleMeaning": "Cô ấy là bạn học của tôi."
+    }
+  ]
+};
+DECKS.hsk1_questions = {
+  "name": "HSK1 · Hỏi & chỉ vị trí",
+  "cards": [
+    {
+      "hanzi": "谁",
+      "pinyin": "shéi",
+      "meaning": "ai",
+      "example": "他是谁？",
+      "examplePinyin": "tā shì shéi",
+      "exampleMeaning": "Anh ấy là ai?"
+    },
+    {
+      "hanzi": "哪",
+      "pinyin": "nǎ",
+      "meaning": "nào",
+      "example": "你是哪国人？",
+      "examplePinyin": "nǐ shì nǎ guó rén",
+      "exampleMeaning": "Bạn là người nước nào?"
+    },
+    {
+      "hanzi": "哪儿",
+      "pinyin": "nǎr",
+      "meaning": "ở đâu",
+      "example": "你去哪儿？",
+      "examplePinyin": "nǐ qù nǎr",
+      "exampleMeaning": "Bạn đi đâu?"
+    },
+    {
+      "hanzi": "这",
+      "pinyin": "zhè",
+      "meaning": "đây; này",
+      "example": "这是我的书。",
+      "examplePinyin": "zhè shì wǒ de shū",
+      "exampleMeaning": "Đây là sách của tôi."
+    },
+    {
+      "hanzi": "那",
+      "pinyin": "nà",
+      "meaning": "kia; đó",
+      "example": "那是我妈妈。",
+      "examplePinyin": "nà shì wǒ mā ma",
+      "exampleMeaning": "Đó là mẹ tôi."
+    },
+    {
+      "hanzi": "里",
+      "pinyin": "lǐ",
+      "meaning": "bên trong",
+      "example": "他在学校里。",
+      "examplePinyin": "tā zài xué xiào lǐ",
+      "exampleMeaning": "Anh ấy ở trong trường."
+    },
+    {
+      "hanzi": "前面",
+      "pinyin": "qián miàn",
+      "meaning": "phía trước",
+      "example": "学校在前面。",
+      "examplePinyin": "xué xiào zài qián miàn",
+      "exampleMeaning": "Trường học ở phía trước."
+    },
+    {
+      "hanzi": "后面",
+      "pinyin": "hòu miàn",
+      "meaning": "phía sau",
+      "example": "他在我后面。",
+      "examplePinyin": "tā zài wǒ hòu miàn",
+      "exampleMeaning": "Anh ấy ở phía sau tôi."
+    }
+  ]
+};
+DECKS.hsk1_weather = {
+  "name": "HSK1 · Thời tiết & cảm nhận",
+  "cards": [
+    {
+      "hanzi": "天气",
+      "pinyin": "tiān qì",
+      "meaning": "thời tiết",
+      "example": "今天天气很好。",
+      "examplePinyin": "jīn tiān tiān qì hěn hǎo",
+      "exampleMeaning": "Hôm nay thời tiết rất đẹp."
+    },
+    {
+      "hanzi": "冷",
+      "pinyin": "lěng",
+      "meaning": "lạnh",
+      "example": "今天很冷。",
+      "examplePinyin": "jīn tiān hěn lěng",
+      "exampleMeaning": "Hôm nay rất lạnh."
+    },
+    {
+      "hanzi": "热",
+      "pinyin": "rè",
+      "meaning": "nóng",
+      "example": "今天太热了。",
+      "examplePinyin": "jīn tiān tài rè le",
+      "exampleMeaning": "Hôm nay nóng quá."
+    },
+    {
+      "hanzi": "下雨",
+      "pinyin": "xià yǔ",
+      "meaning": "mưa",
+      "example": "明天下雨吗？",
+      "examplePinyin": "míng tiān xià yǔ ma",
+      "exampleMeaning": "Ngày mai có mưa không?"
+    },
+    {
+      "hanzi": "高兴",
+      "pinyin": "gāo xìng",
+      "meaning": "vui",
+      "example": "我很高兴。",
+      "examplePinyin": "wǒ hěn gāo xìng",
+      "exampleMeaning": "Tôi rất vui."
+    },
+    {
+      "hanzi": "漂亮",
+      "pinyin": "piào liang",
+      "meaning": "xinh đẹp",
+      "example": "她很漂亮。",
+      "examplePinyin": "tā hěn piào liang",
+      "exampleMeaning": "Cô ấy rất xinh đẹp."
+    },
+    {
+      "hanzi": "大",
+      "pinyin": "dà",
+      "meaning": "to; lớn",
+      "example": "这个苹果很大。",
+      "examplePinyin": "zhè ge píng guǒ hěn dà",
+      "exampleMeaning": "Quả táo này rất to."
+    },
+    {
+      "hanzi": "小",
+      "pinyin": "xiǎo",
+      "meaning": "nhỏ; bé",
+      "example": "这只猫很小。",
+      "examplePinyin": "zhè zhī māo hěn xiǎo",
+      "exampleMeaning": "Con mèo này rất nhỏ."
+    }
+  ]
+};

@@ -2077,7 +2077,8 @@ select { appearance: none; -webkit-appearance: none; background-image: url("data
 #viewDecks .card-area { grid-template-columns: 44px minmax(0,1fr) 44px; gap: 16px; margin-bottom: 16px; }
 #viewDecks .card-face { position: relative; inset: auto; grid-area: 1 / 1; min-width: 0; padding: 64px 36px 32px; overflow: visible; overflow-wrap: anywhere; }
 #viewDecks .card-face > * { flex-shrink: 0; }
-#viewDecks .card-face { transform: none; -webkit-backface-visibility: hidden; }
+#viewDecks .card-face { transform: none; -webkit-backface-visibility: hidden; overflow: hidden; }
+#viewDecks .card-face::before { border-radius: inherit; }
 /* Only render the active face. Safari can paint blurred child buttons through 3D backs. */
 #viewDecks .card:not(.flipped) .card-back, #viewDecks .card.flipped .card-front { display: none; }
 #viewDecks .card .speak-btn { backdrop-filter: none; -webkit-backdrop-filter: none; }
