@@ -2068,9 +2068,11 @@ select { appearance: none; -webkit-appearance: none; background-image: url("data
 .study-heading h2 { margin: 0; font-size: 25px; }
 #focusStudyBtn { min-height: 44px; padding: 10px 18px; color: var(--text); background: var(--bg-elev-2); border: 1px solid var(--border-strong); border-radius: 12px; font: inherit; cursor: pointer; }
 #viewDecks .deck-picker { margin-bottom: 12px; padding: 12px 16px; }
-#viewDecks .card { aspect-ratio: auto; height: clamp(460px, 60vh, 680px); }
+#viewDecks .card { aspect-ratio: auto; height: auto; min-width: 0; }
+#viewDecks .card-inner { display: grid; height: auto; min-height: clamp(460px, 60vh, 680px); }
 #viewDecks .card-area { grid-template-columns: 44px minmax(0,1fr) 44px; gap: 16px; margin-bottom: 16px; }
-#viewDecks .card-face { padding: 52px 36px 24px; }
+#viewDecks .card-face { position: relative; inset: auto; grid-area: 1 / 1; min-width: 0; padding: 64px 36px 32px; overflow: visible; overflow-wrap: anywhere; }
+#viewDecks .card-face > * { flex-shrink: 0; }
 #viewDecks .card-back { justify-content: safe center; }
 #viewDecks .pinyin { font-size: clamp(25px,3vw,38px); }
 #viewDecks .meaning { font-size: clamp(22px,2.5vw,30px); }
@@ -2087,7 +2089,7 @@ select { appearance: none; -webkit-appearance: none; background-image: url("data
 body.study-focus .topbar, body.study-focus .main-nav, body.study-focus .study-reference, body.study-focus .deck-picker { display: none; }
 body.study-focus .app { padding-top: 16px; max-width: 1500px; }
 body.study-focus #viewDecks { max-width: 1360px; }
-body.study-focus #viewDecks .card { height: clamp(460px, 68vh, 880px); }
+body.study-focus #viewDecks .card-inner { min-height: clamp(460px, 68vh, 880px); }
 @media (max-width: 720px) {
   .app { padding: 18px 14px 40px; }
   .topbar h1 { font-size: 22px; gap: 12px; }
@@ -2100,9 +2102,11 @@ body.study-focus #viewDecks .card { height: clamp(460px, 68vh, 880px); }
   .home-choices { grid-template-columns: 1fr; gap: 14px; }
   .home-choice { padding: 24px; }
   .home-primary .btn, .home-choice .btn { width: 100%; }
-  #viewDecks .card-area { grid-template-columns: 28px minmax(0,1fr) 28px; gap: 5px; }
-  #viewDecks .card { height: max(460px, 60svh); }
-  #viewDecks .card-face { padding: 50px 16px 22px; }
+  #viewDecks .card-area { grid-template-columns: 1fr 1fr; gap: 12px; }
+  #viewDecks .card { grid-column: 1 / -1; grid-row: 1; }
+  #viewDecks .card-inner { min-height: max(460px, 60svh); }
+  #viewDecks .nav-btn { grid-row: 2; height: 48px; }
+  #viewDecks .card-face { padding: 64px 20px 28px; }
   #viewDecks .example-pinyin, #viewDecks .example-meaning { font-size: 16px; }
   #viewDecks .deck-picker { gap: 8px; flex-wrap: wrap; }
   #viewDecks .srs-actions { gap: 5px; }
