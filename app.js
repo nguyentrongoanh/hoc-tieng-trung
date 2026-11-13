@@ -161,42 +161,29 @@
   function populateDeckSelect() {
     deckSelect.innerHTML = "";
 
-    const builtin = document.createElement("optgroup");
-    builtin.label = "Bộ mẫu";
-    const orderedDecks = Object.entries(DECKS).sort(([a], [b]) => Number(b.startsWith("hsk1_v2_")) - Number(a.startsWith("hsk1_v2_")));
-    builtin.label = "HSK1 2.0 đầy đủ & các bộ bổ trợ";
-    orderedDecks.forEach(([id, d], idx) => {
-      const opt = document.createElement("option");
-      opt.value = id;
-      opt.textContent = idx === 0 ? `🎯 ${d.name} (${d.cards.length})` : `${d.name} (${d.cards.length})`;
-      builtin.appendChild(opt);
-    });
-    deckSelect.appendChild(builtin);
-
-    const mine = document.createElement("optgroup");
-    mine.label = "Của tôi";
-    const myOpt = document.createElement("option");
-    myOpt.value = CUSTOM_DECK_ID;
-    myOpt.textContent = `Của tôi (${state.customCards.length})`;
-    mine.appendChild(myOpt);
-    deckSelect.appendChild(mine);
-
-    const imported = Object.entries(state.importedDecks);
-    if (imported.length) {
-      const g = document.createElement("optgroup");
-      g.label = "Import";
-      imported.forEach(([id, d]) => {
-        const opt = document.createElement("option");
-        opt.value = id;
-        opt.textContent = `${d.name} (${d.cards.length})`;
-        g.appendChild(opt);
-      });
-      deckSelect.appendChild(g);
+    const categoryOf = id => id.startsWith("hsk1_v2_") ? "hsk" : (id === CUSTOM_DECK_ID || state.importedDecks[id]) ? "mine" : "topic";
+    const selectedCategory = categoryOf(state.deckId);
+    $("deckCategory").value = selectedCategory;
+    const groups = new Map();
+    function append(id, name, cards, group) {
+      if (!groups.has(group)) { const g = document.createElement("optgroup"); g.label = group; groups.set(group, g); }
+      const opt = document.createElement("option"); opt.value = id; opt.textContent = `${name} (${cards.length})`;
+      groups.get(group).appendChild(opt);
+    }
+    for (const [id, d] of Object.entries(DECKS)) {
+      append(id, d.name, d.cards, categoryOf(id) === "hsk" ? "HSK1 · 2.0 · 150 từ" : d.name.includes("Hội thoại") ? "Theo chủ đề · Hội thoại" : "Theo chủ đề · Từ vựng");
+    }
+    append(CUSTOM_DECK_ID, "Của tôi", state.customCards, "Của tôi");
+    for (const [id, d] of Object.entries(state.importedDecks)) append(id, d.name, d.cards, "Đã nhập");
+    const manager = $("manageDeckSelect");
+    manager.replaceChildren(...Array.from(groups.values(), group => group.cloneNode(true)));
+    for (const group of groups.values()) {
+      const filtered = group.cloneNode(true);
+      for (const opt of Array.from(filtered.children)) if (categoryOf(opt.value) !== selectedCategory) opt.remove();
+      if (filtered.children.length) deckSelect.appendChild(filtered);
     }
 
     deckSelect.value = state.deckId;
-    const manager = $("manageDeckSelect");
-    manager.replaceChildren(...Array.from(deckSelect.children, group => group.cloneNode(true)));
     manager.value = state.deckId;
   }
 
@@ -212,7 +199,7 @@
   function render() {
     $("manageDeckSelect").value = state.deckId;
     closeCardLookup(false);
-    stopExampleAudio();
+    stopSpeak();
     ensureDeckBuckets();
     deleteDeckBtn.style.display = isUserDeck(state.deckId) ? "" : "none";
     updateModeButtons();
@@ -408,16 +395,29 @@
     });
   }
 
+  let speechGeneration = 0;
   // Dừng mọi âm đang phát (tránh đọc chồng khi rời bước / nghe lại).
   function stopSpeak() {
+    speechGeneration += 1;
     stopExampleAudio();
+    if (chromeKeepAliveTimer) { clearInterval(chromeKeepAliveTimer); chromeKeepAliveTimer = null; }
+    if (googleAudio) { googleAudio.onerror = null; googleAudio.onended = null; googleAudio.onplaying = null; }
+    if ($("audioStatus")) $("audioStatus").textContent = "";
     if (synth) { try { synth.cancel(); } catch {} }
     if (googleAudio) { try { googleAudio.pause(); googleAudio.currentTime = 0; } catch {} }
   }
 
   let chromeKeepAliveTimer = null;
   function speakWeb(text, cb) {
-    if (!synth) { cb && cb(new Error("no speechSynthesis")); return; }
+    const generation = speechGeneration;
+    let settled = false, startTimer;
+    const done = error => {
+      if (settled || generation !== speechGeneration) return;
+      settled = true; clearTimeout(startTimer);
+      if (chromeKeepAliveTimer) { clearInterval(chromeKeepAliveTimer); chromeKeepAliveTimer = null; }
+      cb && cb(error);
+    };
+    if (!synth) { done(new Error("no speechSynthesis")); return; }
     if (!zhVoice) pickZhVoice();
     try {
       synth.cancel();
@@ -429,6 +429,8 @@
       if (zhVoice) u.voice = zhVoice;
       let startedAt = null;
       u.onstart = () => {
+        if (generation !== speechGeneration || settled) return;
+        clearTimeout(startTimer);
         startedAt = Date.now();
         if (chromeKeepAliveTimer) clearInterval(chromeKeepAliveTimer);
         chromeKeepAliveTimer = setInterval(() => {
@@ -437,32 +439,33 @@
         }, 10000);
       };
       u.onend = () => {
+        if (generation !== speechGeneration || settled) return;
         if (chromeKeepAliveTimer) { clearInterval(chromeKeepAliveTimer); chromeKeepAliveTimer = null; }
         const duration = startedAt ? Date.now() - startedAt : 0;
         // "你好" speak phải tối thiểu ~400ms. Nếu onend fire quá nhanh → silent fail
         if (startedAt && duration < 150) {
           console.warn("[TTS web] silent-success (onend quá nhanh, duration=" + duration + "ms)");
-          cb && cb(new Error("silent-success"));
+          done(new Error("silent-success"));
         } else {
-          cb && cb(null);
+          done(null);
         }
       };
       u.onerror = (e) => {
-        console.warn("[TTS web] error:", e.error || e, "text:", text);
-        cb && cb(new Error(e.error || "tts-error"));
+        if (e.error === "canceled" || e.error === "interrupted") { settled = true; clearTimeout(startTimer); return; }
+        done(new Error(e.error || "tts-error"));
       };
       synth.speak(u);
-      // Auto-fallback nếu không fire onstart trong 700ms
-      setTimeout(() => {
-        if (!startedAt) {
-          console.warn("[TTS web] no onstart after 700ms, assume silent, fallback");
+      // Auto-fallback nếu không fire onstart trong 3 giây
+      startTimer = setTimeout(() => {
+        if (!startedAt && !settled && generation === speechGeneration) {
+          console.warn("[TTS web] no onstart after 3000ms, assume silent, fallback");
+          done(new Error("no-onstart"));
           try { synth.cancel(); } catch {}
-          cb && cb(new Error("no-onstart"));
         }
-      }, 700);
+      }, 3000);
     } catch (e) {
       console.warn("[TTS web] failed:", e);
-      cb && cb(e);
+      done(e);
     }
   }
 
@@ -471,19 +474,33 @@
   // MEDIA_ELEMENT_ERROR: Format error. Youdao vẫn hoạt động tốt.
   function speakGoogle(text) {
     if (!googleAudio) return;
-    const youdaoUrl = `https://dict.youdao.com/dictvoice?audio=${encodeURIComponent(text)}&le=zh`;
-    const googleUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(text)}&tl=zh-CN&client=tw-ob`;
-    try {
-      googleAudio.pause();
-      googleAudio.src = youdaoUrl;
-      googleAudio.play().catch((err) => {
-        console.warn("[TTS youdao] play() rejected, thử Google:", err);
-        googleAudio.src = googleUrl;
-        googleAudio.play().catch((err2) => console.warn("[TTS google] also failed:", err2));
-      });
-    } catch (e) {
-      console.warn("[TTS online] failed:", e);
+    const generation = speechGeneration;
+    const status = $("audioStatus");
+    const urls = [
+      `https://dict.youdao.com/dictvoice?audio=${encodeURIComponent(text)}&le=zh`,
+      `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(text)}&tl=zh-CN&client=tw-ob`
+    ];
+    function attempt(index) {
+      if (generation !== speechGeneration) return;
+      if (index >= urls.length) {
+        status.textContent = "Đang thử giọng tiếng Trung trên thiết bị…";
+        speakWeb(text, error => { status.textContent = error ? "Chưa phát được. Hãy thử lại hoặc bật giọng tiếng Trung trên thiết bị." : ""; });
+        return;
+      }
+      let moved = false;
+      const timer = setTimeout(fallback, 8000);
+      function fallback() {
+        if (moved || generation !== speechGeneration) return;
+        moved = true; clearTimeout(timer); googleAudio.pause(); attempt(index + 1);
+      }
+      status.textContent = "Đang tải âm thanh…";
+      googleAudio.onerror = fallback;
+      googleAudio.onplaying = () => { if (generation === speechGeneration) { clearTimeout(timer); status.textContent = ""; } };
+      googleAudio.onended = () => clearTimeout(timer);
+      googleAudio.src = urls[index];
+      googleAudio.play().catch(fallback);
     }
+    attempt(0);
   }
 
   // Init voice với retry aggressive (một số browser load voices chậm)
@@ -817,8 +834,8 @@
     speakExampleBtn.disabled = true;
     const speech = text.replace(/\b[AB]\s*[:：]/g, "").trim();
     const sources = [
-      "https://translate.google.com/translate_tts?ie=UTF-8&tl=zh-CN&client=tw-ob&q=" + encodeURIComponent(speech),
       "https://dict.youdao.com/dictvoice?le=zh&audio=" + encodeURIComponent(speech),
+      "https://translate.google.com/translate_tts?ie=UTF-8&tl=zh-CN&client=tw-ob&q=" + encodeURIComponent(speech),
     ];
     const clip = window.EXAMPLE_AUDIO?.[text];
     if (clip) sources.unshift(clip.src);
@@ -839,11 +856,7 @@
       let moved = false;
       const fallback = () => { if (moved || token !== examplePlayback) return; moved = true; clearInterval(exampleSegmentTimer); audio.pause(); attempt(index + 1); };
       audio.onerror = fallback;
-      if (clip && index === 0) {
-        audio.addEventListener("loadedmetadata", () => {
-          if (token === examplePlayback) audio.currentTime = clip.start;
-        }, { once: true });
-      }
+
       audio.onplaying = () => {
         if (token !== examplePlayback) return;
         status.textContent = "Đang đọc câu ví dụ…";
@@ -855,7 +868,21 @@
         }
       };
       audio.onended = () => finish("Đã đọc xong câu.");
-      audio.play().catch(fallback);
+      const loadTimer = setTimeout(fallback, 8000);
+      audio.addEventListener("playing", () => clearTimeout(loadTimer), {once: true});
+      audio.addEventListener("error", () => clearTimeout(loadTimer), {once: true});
+      const play = () => { if (token === examplePlayback && !moved) audio.play().catch(fallback); };
+      if (clip && index === 0) {
+        audio.preload = "auto";
+        audio.addEventListener("loadedmetadata", () => {
+          if (token !== examplePlayback || moved) return;
+          if (clip.start > 0) {
+            audio.addEventListener("seeked", play, {once: true});
+            try { audio.currentTime = clip.start; } catch { fallback(); }
+          } else play();
+        }, {once: true});
+        audio.load();
+      } else play();
     }
     attempt(0);
   }
@@ -1080,6 +1107,11 @@
   }
 
   // ---------- Events ----------
+  $("deckCategory").addEventListener("change", event => {
+    const category = event.target.value;
+    state.deckId = category === "hsk" ? window.HSK1.lessons[0].id : category === "mine" ? CUSTOM_DECK_ID : Object.keys(DECKS).find(id => !id.startsWith("hsk1_v2_"));
+    state.index = 0; populateDeckSelect(); randomizeOrder(state.deckId); rebuildQueue(); saveState(); render();
+  });
   deckSelect.addEventListener("change", () => {
     state.deckId = deckSelect.value;
     $("manageDeckSelect").value = state.deckId;
@@ -1091,7 +1123,8 @@
   });
 
   $("manageDeckSelect").addEventListener("change", (event) => {
-    deckSelect.value = event.target.value;
+    state.deckId = event.target.value;
+    populateDeckSelect();
     deckSelect.dispatchEvent(new Event("change", { bubbles: true }));
   });
   $("focusStudyBtn").addEventListener("click", () => {

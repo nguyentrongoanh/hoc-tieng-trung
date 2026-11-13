@@ -108,6 +108,8 @@
   <div class="view" id="viewDecks">
     <div class="study-heading"><h2>Ôn mặt chữ</h2><details class="study-help"><summary aria-label="Hướng dẫn học thẻ">ⓘ</summary><p>Chạm thẻ để lật. Bấm loa để nghe từ hoặc câu.<br>Trên máy tính: Space để lật, P để nghe, ← → để chuyển thẻ, 1–4 để đánh giá sau khi lật.</p></details><button id="focusStudyBtn" type="button" aria-pressed="false">⛶ Tập trung</button></div>
     <div class="deck-picker">
+      <label for="deckCategory">Học theo:</label>
+      <select id="deckCategory" aria-label="Nhóm bộ thẻ"><option value="hsk">Theo HSK</option><option value="topic">Theo chủ đề</option><option value="mine">Của tôi / đã nhập</option></select>
       <label for="deckSelect">Bộ thẻ:</label>
       <select id="deckSelect"></select>
       <div class="mode-toggle" role="tablist" aria-label="Chế độ">
@@ -136,6 +138,7 @@
       </div>
     </div>
 
+  <p id="audioStatus" role="status" aria-live="polite"></p>
   <p id="studyLocation" class="study-location" role="status"></p>
   <section id="cardLookup" class="card-lookup" aria-label="Tra cứu từ trong thẻ" hidden></section>
   <main class="card-area">
@@ -371,7 +374,7 @@
 <script src="hsk1.js?v=20261113-7"></script>
 <script src="examples-data.js?v=20261113-1"></script>
 <script src="examples-audio.js?v=20261113-1"></script>
-<script src="app.js?v=20261113-7"></script>
+<script src="app.js?v=20261113-8"></script>
 <script src="import.js"></script>
 <script src="quiz.js"></script>
 <script src="mastery.js?v=20261112-1"></script>
