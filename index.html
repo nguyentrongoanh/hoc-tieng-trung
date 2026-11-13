@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Serif+SC:wght@500;700&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="styles.css?v=20261113-4" />
+<link rel="stylesheet" href="styles.css?v=20261113-5" />
 </head>
 <body>
 <div class="bg-orb bg-orb-1"></div>
@@ -106,7 +106,7 @@
 
   <!-- 🃏 Bộ thẻ (chế độ cũ) -->
   <div class="view" id="viewDecks">
-    <div class="study-heading"><h2>Ôn mặt chữ</h2><button id="focusStudyBtn" type="button" aria-pressed="false">⛶ Tập trung</button></div>
+    <div class="study-heading"><h2>Ôn mặt chữ</h2><details class="study-help"><summary aria-label="Hướng dẫn học thẻ">ⓘ</summary><p>Chạm thẻ để lật. Bấm loa để nghe từ hoặc câu.<br>Trên máy tính: Space để lật, P để nghe, ← → để chuyển thẻ, 1–4 để đánh giá sau khi lật.</p></details><button id="focusStudyBtn" type="button" aria-pressed="false">⛶ Tập trung</button></div>
     <div class="deck-picker">
       <label for="deckSelect">Bộ thẻ:</label>
       <select id="deckSelect"></select>
@@ -147,7 +147,6 @@
           <div class="card-tag" id="cardTagFront">—</div>
           <button class="speak-btn" id="speakFront" title="Phát âm (P)" aria-label="Phát âm">🔊</button>
           <div class="hanzi" id="hanzi">汉</div>
-          <div class="hint">Nhấn thẻ (hoặc Space) để lật · <kbd>P</kbd> phát âm</div>
         </div>
         <div class="card-face card-back">
           <div class="card-tag" id="cardTagBack">—</div>
