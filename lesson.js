@@ -91,6 +91,7 @@
     Object.entries(VIEW_IDS).forEach(([k, id]) => { const el = $(id); if (el) el.hidden = (k !== name); });
     document.querySelectorAll(".nav-tab").forEach((b) => b.classList.toggle("active", b.dataset.view === (name === "lesson" || name === "conversation" ? "today" : name)));
     if (name === "today") renderToday();
+    if (name === "decks") window.App.refreshRecall();
     if (name === "today" && window.Conversation) window.Conversation.home();
     if (name === "lesson") { renderLesson(); focusTask(); }
     if (name === "mastery" && window.Mastery) window.Mastery.open();
@@ -107,6 +108,7 @@
     if (!c) return;
     const due = window.App ? window.App.dueCount() : 0;
     const hsk = window.App.hskProgress();
+    const recallDue = window.App.recallDueCount();
     const started = !!ls.started;
     const done = !!ls.completed;
     const inProgress = started && !done;
@@ -137,6 +139,7 @@
         <button class="btn btn-secondary" data-act="open-decks">Chọn bài HSK1 →</button>
         <small>Phiên bản 150 từ, không phải HSK 3.0. <a href="https://www.chinesetest.cn/HSK/1?type=2" target="_blank" rel="noopener">Phạm vi từ vựng</a></small>
       </section>
+      ${recallDue ? `<section class="hsk-overview"><h3>${recallDue} từ cần viết lại từ trí nhớ</h3><p>Thử viết theo nghĩa và pinyin trước khi nhìn mẫu.</p><button class="btn btn-primary" data-act="open-decks">Vào ôn viết →</button></section>` : ""}
       <div class="home-choices">
         <article class="home-primary"><div class="home-symbol" lang="zh-CN">字</div><div>
           <p class="home-eyebrow">ÔN MẶT CHỮ</p><h3>Tiếp tục bộ thẻ của bạn</h3>

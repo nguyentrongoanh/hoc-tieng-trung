@@ -200,6 +200,7 @@
     $("manageDeckSelect").value = state.deckId;
     closeCardLookup(false);
     stopSpeak();
+    renderRecall();
     ensureDeckBuckets();
     deleteDeckBtn.style.display = isUserDeck(state.deckId) ? "" : "none";
     updateModeButtons();
@@ -1030,8 +1031,10 @@
       const cards = getDeckCards(state.deckId);
       state.index = (state.index + 1) % cards.length;
     }
+    recallEncounter();
     saveState();
     render();
+    offerRecall();
   }
 
   function go(delta) {
@@ -1041,7 +1044,7 @@
     state.index = (state.index + delta + cards.length) % cards.length;
     saveState();
     setSRSButtonsEnabled(false);
-    advanceWithFade(() => render());
+    advanceWithFade(() => { recallEncounter(); saveState(); render(); offerRecall(); });
   }
 
   // Sinh một thứ tự ngẫu nhiên (hoán vị) cho bộ, dùng cho chế độ Lướt.
@@ -1354,6 +1357,27 @@
     addForm.reset();
   });
 
+  // ---------- Delayed writing recall ----------
+  function renderRecall() {
+    const due = WritingRecall.due(state);
+    const box = $("writingRecallBanner");
+    box.hidden = !WritingRecall.count(state);
+    $("writingRecallMessage").textContent = due.length
+      ? `${due.length} từ đến lượt viết từ trí nhớ. Chỉ xem nghĩa và pinyin, rồi tự viết lại.`
+      : "Đã lưu lịch luyện nhớ. Từ vừa viết sẽ quay lại sau 3 thẻ khác hoặc khoảng 10 phút; các lượt sau cách xa hơn.";
+    $("writingRecallStart").hidden = !due.length;
+  }
+  function recallEncounter() {
+    const c = getCurrentCard()?.card;
+    if (c) WritingRecall.encounter(state, c.hanzi);
+  }
+  function offerRecall() {
+    if ($("viewDecks").hidden || writingTestModal.classList.contains("active")) return;
+    const due = WritingRecall.due(state);
+    if (due.length) openWritingTest(due[0]);
+  }
+  $("writingRecallStart").addEventListener("click", offerRecall);
+
   // ---------- Writing test (HanziWriter) ----------
   let writer = null;
   let writingChars = [];
@@ -1362,9 +1386,17 @@
   let writingMistakesThisChar = 0;
   let writingShowOutline = false;
   let writingAttempt = 0;
+  let writingSource = null;
+  let writingRecallWord = null;
+  let writingCompleted = new Set();
+  let writingAssisted = false;
+  let writingFinished = false;
 
-  function openWritingTest() {
-    const cur = getCurrentCard();
+  function openWritingTest(recall) {
+    stopSpeak();
+    if (autoplayTimer) { clearTimeout(autoplayTimer); autoplayTimer = null; }
+    const isRecall = recall && recall.card && typeof recall.stage === "number";
+    const cur = isRecall ? {card: recall.card} : getCurrentCard();
     if (!cur || !cur.card || !cur.card.hanzi) {
       alert("Chưa có thẻ để test.");
       return;
@@ -1381,6 +1413,13 @@
       pinyin: pinyinParts[i] || cur.card.pinyin || "",
       meaning: cur.card.meaning || "",
     }));
+    writingSource = {...cur.card};
+    writingRecallWord = isRecall ? cur.card.hanzi : null;
+    writingCompleted = new Set(); writingAssisted = false; writingFinished = false;
+    $("writingTestTitle").textContent = isRecall ? "Nhớ lại và tự viết" : "✏️ Thử viết chữ Hán";
+    $("writingRecallInstruction").textContent = isRecall
+      ? "Đừng xem mẫu trước. Tự viết theo nghĩa và pinyin. Dùng gợi ý vẫn được, nhưng lượt này sẽ cần ôn lại."
+      : "Viết xong từ 1–4 chữ sẽ được hẹn kiểm tra lại sau vài thẻ. Không cần chép nhiều lần liên tiếp.";
     writingIndex = 0;
     writingMistakesTotal = 0;
     writingMistakesThisChar = 0;
@@ -1390,6 +1429,9 @@
   }
 
   function closeWritingTest() {
+    if (writingRecallWord && !writingFinished) { WritingRecall.defer(state, writingRecallWord); saveState(); }
+    writingRecallWord = null;
+    renderRecall();
     writingAttempt++;
     writingTestModal.classList.remove("active");
     document.body.style.overflow = "";
@@ -1442,7 +1484,7 @@
     });
 
     writer.quiz({
-      showHintAfterMisses: 3,
+      showHintAfterMisses: Infinity,
       highlightOnComplete: true,
       onMistake: () => {
         if (attempt !== writingAttempt) return;
@@ -1461,10 +1503,24 @@
                     : writingMistakesThisChar <= 2 ? "👍 Tốt!"
                     : "✍️ Xong (nhiều sai)";
         $("writingTestStatus").textContent = `${grade} (${writingMistakesThisChar} sai)`;
+        writingCompleted.add(writingIndex);
         if (writingIndex + 1 < writingChars.length) {
           writingTestSkipBtn.textContent = "Tiếp theo →";
-        } else {
-          $("writingTestStatus").textContent = `🏁 Xong ${writingChars.length} chữ! Tổng ${writingMistakesTotal} nét sai. Bấm “Viết lại từ đầu” để tập thêm.`;
+        } else if (writingCompleted.size === writingChars.length && !writingFinished) {
+          writingFinished = true;
+          if (writingRecallWord) {
+            const passed = !writingAssisted && writingMistakesTotal < 5;
+            WritingRecall.finish(state, writingRecallWord, passed);
+            $("writingTestStatus").textContent = passed
+              ? "✅ Đã tự nhớ lại! Hẹn ôn sau khoảng 6 giờ, rồi 1 ngày, 3 ngày và 7 ngày tùy lượt đạt."
+              : "Cần ôn lại sau 3 thẻ khác hoặc khoảng 10 phút. Xem mẫu rồi nghỉ một chút nhé.";
+          } else {
+            WritingRecall.enroll(state, writingSource);
+            $("writingTestStatus").textContent = "Đã viết xong. Chuyển sang vài thẻ khác; app sẽ hỏi lại để xem bạn còn nhớ không.";
+          }
+          saveState(); renderRecall();
+        } else if (!writingFinished) {
+          $("writingTestStatus").textContent = "Bạn đã bỏ qua một chữ. Bấm Viết lại từ đầu để hoàn thành cả từ.";
         }
       },
     });
@@ -1485,6 +1541,7 @@
 
   // Bật/tắt nét mờ hướng dẫn (outline) của chữ đang viết.
   function setWritingOutline(show) {
+    if (show) writingAssisted = true;
     writingShowOutline = show;
     if (writer) {
       try {
@@ -1500,6 +1557,9 @@
 
   if (writeTestBtn) writeTestBtn.addEventListener("click", openWritingTest);
   $("writingTestReset").addEventListener("click", () => {
+    // Repetition immediately after success is practice, never another spaced pass.
+    if (writingFinished) writingRecallWord = null;
+    writingCompleted = new Set(); writingAssisted = !!writingRecallWord; writingFinished = false;
     writingIndex = 0;
     writingMistakesTotal = 0;
     startCharTest();
@@ -1514,6 +1574,7 @@
     setWritingOutline(!writingShowOutline);
   });
   if (writingTestHintBtn) writingTestHintBtn.addEventListener("click", () => {
+    writingAssisted = true;
     // Tô đậm nét hiện tại (nét kế tiếp cần viết) để gợi ý.
     try {
       if (writer && writer._quiz && typeof writer._quiz._currentStrokeIndex === "number") {
@@ -1522,6 +1583,7 @@
     } catch {}
   });
   if (writingTestAnimateBtn) writingTestAnimateBtn.addEventListener("click", () => {
+    writingAssisted = true;
     if (writer) try { writer.cancelQuiz(); writer.animateCharacter(); } catch {}
   });
   if (writingTestSkipBtn) writingTestSkipBtn.addEventListener("click", () => {
@@ -1564,6 +1626,8 @@
 
   // ---------- Public API cho lesson.js (bài học Hôm nay) ----------
   window.App = {
+    recallDueCount() { return WritingRecall.due(state).length; },
+    refreshRecall() { renderRecall(); },
     hskProgress() {
       return window.HSK1.progress(state, key => JSON.parse(localStorage.getItem(key)));
     },

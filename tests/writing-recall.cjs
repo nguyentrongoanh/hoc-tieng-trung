@@ -1,0 +1,12 @@
+const vm=require('node:vm'),fs=require('node:fs'),assert=require('node:assert/strict'),path=require('node:path');
+const root=path.join(__dirname,'..'),src=fs.readFileSync(path.join(root,'app.js'),'utf8');
+const els={};const el=()=>({textContent:'',innerHTML:'',classList:{add(){},remove(){},toggle(){},contains(){return false}},addEventListener(t,f){this[t]=f}});const $=id=>els[id]??=el();let quiz,creates=[];
+const ctx={window:{},state:{},$,document:{body:{style:{}},addEventListener(){}},getCurrentCard:()=>({card:{hanzi:'我',pinyin:'wǒ',meaning:'tôi'}}),stopSpeak(){},autoplayTimer:null,saveState(){},renderRecall(){},HanziWriter:{create:(target,char,opts)=>{creates.push(opts);return {quiz:q=>quiz=q,cancelQuiz(){},showOutline(){},hideOutline(){}}}},alert(){},writingTestModal:el(),writingTestTarget:el(),writingTestOutlineBtn:el(),writingTestSkipBtn:el(),writingTestHintBtn:el(),writingTestAnimateBtn:el(),writingTestCloseBtn:el(),writeTestBtn:el()};vm.createContext(ctx);vm.runInContext(fs.readFileSync(path.join(root,'recall.js'),'utf8'),ctx);ctx.WritingRecall=ctx.window.WritingRecall;
+vm.runInContext(src.slice(src.indexOf('  // ---------- Writing test'),src.indexOf('  // Esc to close modal')),ctx);
+ctx.openWritingTest();quiz.onComplete();assert.equal(ctx.WritingRecall.count(ctx.state),1);ctx.closeWritingTest();const record=ctx.state.writingRecall['我'];
+ctx.openWritingTest(record);assert.equal($('writingTestMeaning').textContent,'tôi');assert.equal($('writingTestPinyin').textContent,'wǒ');assert.equal(creates.at(-1).showCharacter,false);assert.equal(creates.at(-1).showOutline,false);assert.equal(quiz.showHintAfterMisses,Infinity);
+quiz.onComplete();assert.equal(record.stage,1);$('writingTestReset').click();quiz.onComplete();assert.equal(record.stage,1,'immediate repeat is not another spaced pass');ctx.closeWritingTest();
+ctx.openWritingTest(record);ctx.writingTestOutlineBtn.click();quiz.onComplete();assert.equal(record.stage,1,'assisted attempt does not pass');ctx.closeWritingTest();
+ctx.openWritingTest(record);for(let i=0;i<5;i++)quiz.onMistake();quiz.onComplete();assert.equal(record.stage,1,'five mistakes do not pass');ctx.closeWritingTest();
+ctx.openWritingTest(record);ctx.closeWritingTest();assert.equal(record.gap,null,'dismissed prompt waits rather than interrupts every card');
+console.log('PASS recall UI: hidden model, explicit hints, successful scheduling, repeat/assisted/error safeguards, dismissal');

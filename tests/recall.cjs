@@ -1,0 +1,12 @@
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict'),path=require('node:path');
+const root=path.join(__dirname,'..'),ctx={window:{}};vm.createContext(ctx);vm.runInContext(fs.readFileSync(path.join(root,'recall.js'),'utf8'),ctx);const R=ctx.window.WritingRecall;
+const state={},card={hanzi:'我',pinyin:'wǒ',meaning:'tôi'},now=1000000;
+assert(R.enroll(state,card,now));assert(!R.enroll(state,{...card,pinyin:'wo3'},now));assert(!R.enroll(state,{hanzi:'你好我是学生'},now));assert.equal(R.due(state,now).length,0);
+for(const word of ['我','你','你','他'])R.encounter(state,word);
+assert.equal(R.due(state,now).length,0,'same/duplicate word not an intervening card');R.encounter(state,'她');assert.equal(R.due(state,now).length,1);
+const restored=JSON.parse(JSON.stringify(state));assert.equal(R.due(restored,now).length,1,'survives reopening/backup');
+R.finish(state,'我',true,now);assert.equal(state.writingRecall['我'].stage,1);assert.equal(R.due(state,now+6*3600000-1).length,0);assert.equal(R.due(state,now+6*3600000).length,1);
+R.finish(state,'我',true,now);assert.equal(state.writingRecall['我'].dueAt,now+86400000);
+R.finish(state,'我',false,now);assert.equal(state.writingRecall['我'].stage,2,'failed recall never advances');assert.equal(R.due(state,now+600000).length,1);
+R.defer(state,'我',now);assert.equal(R.due(state,now).length,0);assert.equal(R.due(state,now+600000).length,1);
+console.log('PASS spaced recall: distinct cards, persistent schedule, six-hour/day intervals, retry and deferral');

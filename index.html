@@ -141,6 +141,7 @@
     </div>
 
   <p id="audioStatus" role="status" aria-live="polite"></p>
+  <section id="writingRecallBanner" class="hsk-overview" hidden aria-label="Ôn viết từ trí nhớ"><p id="writingRecallMessage"></p><button id="writingRecallStart" class="btn btn-secondary" type="button">Viết lại từ trí nhớ →</button></section>
   <p id="studyLocation" class="study-location" role="status"></p>
   <section id="cardLookup" class="card-lookup" aria-label="Tra cứu từ trong thẻ" hidden></section>
   <main class="card-area">
@@ -274,6 +275,7 @@
       <span>· pinyin <strong id="writingTestPinyin">—</strong></span>
       <span>· <strong id="writingTestMeaning">—</strong></span>
     </div>
+    <p id="writingRecallInstruction" class="muted"></p>
     <div class="writing-test-canvas" id="writingTestTarget"></div>
     <div class="writing-test-stats">
       Nét sai: <strong id="writingTestMistakes">0</strong>
@@ -288,7 +290,7 @@
     </div>
     <p class="muted" style="font-size: 12px; text-align: center; margin-top: 10px; line-height: 1.5;">
       Tự viết từ trí nhớ (không nét mờ). Bấm "👁 Nét mờ" để xem nét hướng dẫn.<br>
-      Vẽ từng nét theo thứ tự; sai 3 lần sẽ được gợi ý tự động.
+      Vẽ từng nét theo thứ tự. Chỉ hiện gợi ý khi bạn chủ động bấm.
     </p>
   </div>
 </div>
@@ -375,13 +377,14 @@
 <script src="srs.js"></script>
 <script src="decks.js?v=20261113-6"></script>
 <script src="hsk1.js?v=20261113-7"></script>
+<script src="recall.js?v=20261114-3"></script>
 <script src="examples-data.js?v=20261113-1"></script>
 <script src="examples-audio.js?v=20261113-1"></script>
-<script src="app.js?v=20261114-1"></script>
+<script src="app.js?v=20261114-3"></script>
 <script src="import.js"></script>
 <script src="quiz.js"></script>
 <script src="mastery.js?v=20261112-1"></script>
-<script src="lesson.js?v=20261113-7"></script>
+<script src="lesson.js?v=20261114-3"></script>
 <script src="sentences.js?v=20261112-5"></script>
 <script src="conversation.js?v=20261112-4"></script>
 <script src="phrases-data.js"></script>
