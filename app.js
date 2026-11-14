@@ -1361,6 +1361,7 @@
   let writingMistakesTotal = 0;
   let writingMistakesThisChar = 0;
   let writingShowOutline = false;
+  let writingAttempt = 0;
 
   function openWritingTest() {
     const cur = getCurrentCard();
@@ -1389,6 +1390,7 @@
   }
 
   function closeWritingTest() {
+    writingAttempt++;
     writingTestModal.classList.remove("active");
     document.body.style.overflow = "";
     if (writer) {
@@ -1399,6 +1401,8 @@
   }
 
   function startCharTest() {
+    const attempt = ++writingAttempt;
+    if (writer) { try { writer.cancelQuiz(); } catch {} writer = null; }
     if (typeof HanziWriter === "undefined") {
       alert("Thư viện HanziWriter chưa tải xong. Chờ 1-2s rồi thử lại.");
       return;
@@ -1416,6 +1420,7 @@
     $("writingTestMeaning").textContent = cur.meaning;
     $("writingTestMistakes").textContent = writingMistakesTotal;
     $("writingTestStatus").textContent = "";
+    writingTestSkipBtn.textContent = "⏭ Bỏ qua";
     writingTestTarget.innerHTML = "";
 
     writer = HanziWriter.create(writingTestTarget, cur.char, {
@@ -1440,20 +1445,27 @@
       showHintAfterMisses: 3,
       highlightOnComplete: true,
       onMistake: () => {
+        if (attempt !== writingAttempt) return;
         writingMistakesThisChar++;
         writingMistakesTotal++;
         $("writingTestMistakes").textContent = writingMistakesTotal;
         $("writingTestStatus").textContent = "❌ Sai nét, thử lại";
       },
       onCorrectStroke: () => {
+        if (attempt !== writingAttempt) return;
         $("writingTestStatus").textContent = "✅ Đúng!";
       },
       onComplete: () => {
+        if (attempt !== writingAttempt) return;
         const grade = writingMistakesThisChar === 0 ? "🎉 Hoàn hảo!"
                     : writingMistakesThisChar <= 2 ? "👍 Tốt!"
                     : "✍️ Xong (nhiều sai)";
         $("writingTestStatus").textContent = `${grade} (${writingMistakesThisChar} sai)`;
-        setTimeout(nextCharOrFinish, 1200);
+        if (writingIndex + 1 < writingChars.length) {
+          writingTestSkipBtn.textContent = "Tiếp theo →";
+        } else {
+          $("writingTestStatus").textContent = `🏁 Xong ${writingChars.length} chữ! Tổng ${writingMistakesTotal} nét sai. Bấm “Viết lại từ đầu” để tập thêm.`;
+        }
       },
     });
   }
@@ -1487,6 +1499,11 @@
   }
 
   if (writeTestBtn) writeTestBtn.addEventListener("click", openWritingTest);
+  $("writingTestReset").addEventListener("click", () => {
+    writingIndex = 0;
+    writingMistakesTotal = 0;
+    startCharTest();
+  });
   if (writingTestCloseBtn) writingTestCloseBtn.addEventListener("click", closeWritingTest);
   if (writingTestModal) {
     writingTestModal.addEventListener("click", (e) => {
